@@ -42,6 +42,9 @@ npm run dev
 - **Recommendation Engine**: Deterministic, explainable scoring
 - **Database**: Supabase PostgreSQL (designed, not yet connected)
 - **Charts**: Recharts
+- **Security/RAG foundation**: bounded input validation, prompt-injection screening,
+  deterministic local retrieval, explicit untrusted-data delimiters, output guardrails,
+  and a PostgreSQL/pgvector schema artifact
 
 ### AI Provider Architecture
 
@@ -86,6 +89,7 @@ dishaai/
 │   │   └── report/page.tsx         # Printable family career report
 │   ├── counsellor/page.tsx         # AI Career Counsellor chat
 │   ├── admin/page.tsx              # Analytics dashboard
+│   ├── api/health/route.ts         # Safe runtime/configuration probe
 │   └── api/ai/
 │       ├── explain-career/route.ts # Career explanation API
 │       ├── family-faq/route.ts     # FAQ answer API
@@ -101,6 +105,8 @@ dishaai/
 │   │   └── types.ts                # AI type definitions
 │   ├── recommendation/
 │   │   └── engine.ts               # Deterministic scoring engine
+│   ├── knowledge/retrieval.ts      # Local lexical RAG adapter
+│   ├── security/                   # Input, injection, output, and request controls
 │   └── utils.ts
 ├── components/
 │   ├── layout/Sidebar.tsx          # Navigation sidebar + TopNav
@@ -114,7 +120,9 @@ dishaai/
 │       └── Progress.tsx            # Progress bar + ScoreRing
 ├── data/
 │   └── careers.ts                  # Knowledge base (10 vocational careers)
-└── types/index.ts                  # Full TypeScript types
+├── db/schema.sql                    # PostgreSQL + pgvector baseline
+├── docs/                            # PDF workflow and deployment runbooks
+└── types/index.ts                   # Full TypeScript types
 ```
 
 ---
@@ -165,6 +173,27 @@ The app works without keys — AI features return graceful fallbacks when keys a
 > Salary ranges, job demand figures, government scheme details, and cost estimates are NOT official statistics.
 > 
 > Verify all career information with official sources: NSDC, MSDE, Skill India, or the relevant State Skill Development Mission.
+
+---
+
+## Troubleshooting browser-extension errors
+
+If onboarding reports either of these errors in development:
+
+- A hydration attribute mismatch containing `bis_skin_checked="1"`: an extension has changed the HTML before React hydrated it. This attribute is not emitted by DishaAI. The warning can include Next.js's own hidden wrapper, so adding `suppressHydrationWarning` to the page or body is not a repair.
+- `Cannot read properties of undefined (reading 'M_ID')`, with a stack under `chrome-extension://nimlmejbmnecnaghgmbahmbaddhjbecg/executors/200.js`: the failing script belongs to **Urban VPN Proxy for Edge**, not application code.
+
+To resolve this in the affected Edge profile:
+
+1. Open `edge://extensions` and temporarily turn off Urban VPN Proxy while testing localhost, or restrict its site access so it cannot run on localhost.
+2. Temporarily disable other DOM-modifying browser extensions for local testing. Re-enable them individually to identify the extension adding `bis_skin_checked`. Do not disable system antivirus protection.
+3. Hard-refresh `http://localhost:3000/onboarding` with **Cmd+Shift+R** on macOS (**Ctrl+Shift+R** on Windows). No need to clear your saved answers or reinstall project dependencies.
+4. Alternatively, use a fresh Edge profile or InPrivate window, ensuring the affected extensions are **not allowed in InPrivate**.
+5. Verify that the console has no hydration or runtime errors, then complete Education → Interests → Skills → Preferences → Goals and confirm the dashboard reads back the profile after a reload.
+
+The five-step flow was verified in isolated, extension-free Edge contexts at desktop and mobile widths. The affected external browser profile still needs the configuration change above; workspace code cannot repair an extension's internal `M_ID` exception.
+
+References: [Next.js hydration troubleshooting](https://nextjs.org/docs/messages/react-hydration-error) · [Urban VPN Proxy extension identification](https://chrome-stats.com/d/nimlmejbmnecnaghgmbahmbaddhjbecg).
 
 ---
 

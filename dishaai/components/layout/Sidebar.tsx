@@ -14,6 +14,8 @@ import {
   Settings,
 } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
+import { LanguageSelector } from '@/components/gov/LanguageSelector';
+import { ClerkAuthButton } from '@/components/auth/ClerkAuthButton';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -37,7 +39,7 @@ export function Sidebar({ userName = 'Ravi Sharma', userRole = 'student' }: Side
 
   return (
     <aside
-      className="fixed left-0 top-0 h-full w-[240px] bg-white border-r border-[#e2e8f0] flex flex-col z-40"
+      className="disha-sidebar fixed left-0 top-0 h-full w-[240px] bg-white border-r border-[#e2e8f0] flex flex-col z-40"
       aria-label="Main navigation"
     >
       {/* Logo */}
@@ -111,11 +113,28 @@ export function Sidebar({ userName = 'Ravi Sharma', userRole = 'student' }: Side
           </div>
         )}
 
+        {/* Authentication & Language Controls */}
+        <div className="mt-4 px-2 space-y-2">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Language
+            </span>
+            <LanguageSelector className="w-full" />
+          </div>
+
+          <div className="pt-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+              Account
+            </span>
+            <ClerkAuthButton className="w-full justify-center" />
+          </div>
+        </div>
+
         {/* Demo Notice */}
-        <div className="mt-6 mx-1 p-3 bg-[#fffbeb] border border-[#fef3c7] rounded-xl">
-          <p className="text-[11px] font-semibold text-[#d97706] mb-0.5">Demo Mode</p>
+        <div className="mt-4 mx-1 p-3 bg-[#fffbeb] border border-[#fef3c7] rounded-xl">
+          <p className="text-[11px] font-semibold text-[#d97706] mb-0.5">Disha AI</p>
           <p className="text-[11px] text-[#92400e] leading-snug">
-            Using illustrative data for SIH demonstration.
+            Career intelligence powered by Gemini & Clerk.
           </p>
         </div>
       </nav>
@@ -170,18 +189,8 @@ export function TopNav() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link
-            href="/onboarding"
-            className="px-4 py-2 rounded-xl text-sm font-medium text-[#1a2e5a] hover:bg-[#f0f4ff] transition-colors"
-          >
-            Sign In
-          </Link>
-          <Link
-            href="/onboarding"
-            className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#1a2e5a] text-white hover:bg-[#0f1e3c] transition-colors shadow-sm"
-          >
-            Get Started
-          </Link>
+          <LanguageSelector />
+          <ClerkAuthButton />
         </div>
       </div>
     </header>

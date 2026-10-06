@@ -1,14 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { answerFamilyFAQ } from '@/lib/ai/provider';
 import { DEMO_CAREERS } from '@/data/careers';
+import { prepareSafeAIRequest } from '@/lib/ai/pipeline';
+import { logSecurityEvent } from '@/lib/security/audit';
+import { readJsonRequest, validateAIFields, validationDetails } from '@/lib/security/request';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { question, careerId } = body;
+    const bodyResult = await readJsonRequest(request);
+    if (!bodyResult.ok) {
+      return NextResponse.json(
+        { error: 'Invalid request body.', details: validationDetails(bodyResult.errors) },
+        { status: 400 },
+      );
+    }
+
+    const fieldsResult = validateAIFields(bodyResult.value);
+    if (!fieldsResult.ok) {
+      return NextResponse.json(
+        { error: 'Invalid AI request fields.', details: validationDetails(fieldsResult.errors) },
+        { status: 400 },
+      );
+    }
+
+    const { question, careerId, history } = fieldsResult.value;
 
     if (!question || !careerId) {
       return NextResponse.json({ error: 'Missing question or careerId' }, { status: 400 });
+    }
+
+    const security = prepareSafeAIRequest({ question, history });
+    logSecurityEvent({
+      action: 'family_faq_request',
+      decision: security.security.decision,
+      riskLevel: security.security.riskLevel,
+      matchedRuleIds: security.security.matchedRuleIds,
+      blockedFields: security.security.blockedFields,
+      acceptedSourceIds: security.security.acceptedSourceIds,
+    });
+    if (security.security.blocked) {
+      return NextResponse.json(
+        {
+          error: 'Request blocked by the security policy.',
+          security: {
+            riskLevel: security.security.riskLevel,
+            matchedRuleIds: security.security.matchedRuleIds,
+          },
+        },
+        { status: 422 },
+      );
     }
 
     const career = DEMO_CAREERS.find((c) => c.id === careerId);

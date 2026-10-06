@@ -1,0 +1,650 @@
+.step {
+  container: onboarding-form / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+  width: 100%;
+  color: var(--onboarding-text);
+  color-scheme: dark;
+}
+
+.step *,
+.step *::before,
+.step *::after {
+  box-sizing: border-box;
+}
+
+.step ::selection {
+  background: var(--onboarding-accent-soft);
+  color: var(--onboarding-text);
+}
+
+.heading {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--onboarding-text);
+  font-family: var(--onboarding-serif);
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  scroll-margin-block: 28px;
+}
+
+.title:focus-visible {
+  outline: 2px solid var(--onboarding-accent);
+  outline-offset: 7px;
+  border-radius: 3px;
+}
+
+.description {
+  max-width: 570px;
+  margin: 10px 0 0;
+  color: var(--onboarding-muted);
+  font-size: 14px;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fieldLabel,
+.legend {
+  color: var(--onboarding-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.fieldLabel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 8px;
+  row-gap: 4px;
+}
+
+.requiredBadge,
+.optionalBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 1px solid var(--onboarding-border);
+  border-radius: 999px;
+  color: var(--onboarding-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.requiredBadge {
+  border-color: rgba(230, 155, 83, 0.22);
+  background: var(--onboarding-accent-soft);
+  color: var(--onboarding-accent);
+}
+
+.legend > span {
+  margin-left: 6px;
+}
+
+.textInput,
+.selectInput {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 15px;
+  border: 1px solid var(--onboarding-border);
+  border-radius: 10px;
+  background: var(--onboarding-raised);
+  color: var(--onboarding-text);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.textInput::placeholder {
+  color: var(--onboarding-muted);
+  opacity: 0.85;
+}
+
+.textInput:hover,
+.selectInput:hover {
+  border-color: rgba(246, 239, 229, 0.3);
+}
+
+.textInput:focus,
+.selectInput:focus {
+  border-color: var(--onboarding-accent);
+}
+
+.selectWrapper {
+  position: relative;
+  min-width: 0;
+}
+
+.selectInput {
+  appearance: none;
+  padding-right: 42px;
+  cursor: pointer;
+}
+
+.selectInput option {
+  background: var(--onboarding-raised);
+  color: var(--onboarding-text);
+}
+
+.selectChevron {
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  color: var(--onboarding-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.fieldset {
+  min-width: 0;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  max-width: 100%;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.educationGrid,
+.interestGrid,
+.preferenceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  min-width: 0;
+}
+
+.radioCard,
+.interestCard,
+.goalCard {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--onboarding-border);
+  border-radius: 12px;
+  background: var(--onboarding-surface);
+  color: var(--onboarding-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.radioCard {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 100px;
+  padding: 15px;
+}
+
+.radioTopline,
+.cardTopline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.nativeRadio {
+  appearance: none;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  border: 1.5px solid var(--onboarding-muted);
+  border-radius: 50%;
+  background: var(--onboarding-raised);
+  cursor: pointer;
+}
+
+.nativeRadio:checked {
+  border-color: var(--onboarding-accent);
+  background: var(--onboarding-accent);
+  box-shadow: inset 0 0 0 4px var(--onboarding-raised);
+}
+
+.optionTitle {
+  display: block;
+  min-width: 0;
+  color: var(--onboarding-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.optionDescription {
+  display: block;
+  min-width: 0;
+  color: var(--onboarding-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.groupStatus {
+  margin: 0 0 16px;
+}
+
+.selectionCount {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 5px;
+  row-gap: 3px;
+  margin: 0;
+  color: var(--onboarding-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.countNumber {
+  color: var(--onboarding-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.countDivider {
+  margin-inline: 4px;
+}
+
+.groupHelp,
+.ratingHelp {
+  margin: 0 0 14px;
+  color: var(--onboarding-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.interestCard {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 154px;
+  padding: 16px;
+}
+
+.cardTopline {
+  align-items: center;
+  margin-bottom: 7px;
+}
+
+.iconWell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--onboarding-border);
+  border-radius: 10px;
+  background: var(--onboarding-raised);
+  color: var(--onboarding-muted);
+}
+
+.selectionMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--onboarding-border);
+  border-radius: 50%;
+  color: var(--onboarding-accent);
+}
+
+.selected {
+  border-color: var(--onboarding-accent);
+  background: var(--onboarding-accent-soft);
+}
+
+.selected .iconWell,
+.selected .selectionMark {
+  border-color: rgba(230, 155, 83, 0.35);
+  background: var(--onboarding-accent-soft);
+  color: var(--onboarding-accent);
+}
+
+.step :is(button, input, select):focus-visible,
+.radioCard:has(.nativeRadio:focus-visible),
+.skillToggle:has(.nativeCheckbox:focus-visible) {
+  outline: 2px solid var(--onboarding-accent);
+  outline-offset: 3px;
+}
+
+.step .nativeRadio:focus-visible,
+.step .nativeCheckbox:focus-visible {
+  outline: none;
+}
+
+.skillList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.skillRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  border: 1px solid var(--onboarding-border);
+  border-radius: 12px;
+  background: var(--onboarding-surface);
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.skillRow.selected {
+  border-color: var(--onboarding-accent);
+  background: var(--onboarding-accent-soft);
+}
+
+.skillToggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 72px;
+  padding: 16px;
+  border-radius: 11px;
+  cursor: pointer;
+}
+
+.nativeCheckbox {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--onboarding-accent);
+  cursor: pointer;
+}
+
+.skillText {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  min-width: 0;
+}
+
+.skillName {
+  color: var(--onboarding-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.skillCategory {
+  padding: 2px 7px;
+  border: 1px solid var(--onboarding-border);
+  border-radius: 5px;
+  color: var(--onboarding-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.proficiencyControl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  min-inline-size: 0;
+  margin: 0 16px 16px;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--onboarding-border);
+}
+
+.ratingButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ratingButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--onboarding-border);
+  border-radius: 8px;
+  background: var(--onboarding-raised);
+  color: var(--onboarding-muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.ratingSelected {
+  border-color: var(--onboarding-accent);
+  background: var(--onboarding-accent);
+  color: var(--onboarding-bg);
+}
+
+.proficiencyValue {
+  color: var(--onboarding-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.goalGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+}
+
+.goalCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 108px;
+  padding: 18px;
+}
+
+.goalText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.goalCard .selectionMark {
+  margin-top: 3px;
+}
+
+.careerNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--onboarding-border);
+  border-radius: 12px;
+  background: var(--onboarding-raised);
+}
+
+.noteIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--onboarding-accent);
+}
+
+.noteTitle {
+  margin: 0;
+  color: var(--onboarding-text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.noteBody {
+  margin: 6px 0 0;
+  color: var(--onboarding-muted);
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}
+
+@container onboarding-form (min-width: 440px) {
+  .detailsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .goalGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container onboarding-form (min-width: 540px) {
+  .educationGrid,
+  .preferenceFour {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .interestGrid,
+  .preferenceThree {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container onboarding-form (min-width: 560px) {
+  .skillRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .proficiencyControl {
+    align-items: flex-end;
+    margin: 0;
+    padding: 14px 16px 14px 4px;
+    border: 0;
+  }
+}
+
+@container onboarding-form (max-width: 340px) {
+  .educationGrid,
+  .interestGrid,
+  .preferenceGrid {
+    gap: 10px;
+  }
+
+  .radioCard,
+  .interestCard {
+    padding: 12px;
+  }
+
+  .skillToggle {
+    padding: 14px 12px;
+  }
+
+  .proficiencyControl {
+    margin-right: 12px;
+    margin-left: 12px;
+  }
+
+  .ratingButtons {
+    gap: 4px;
+  }
+
+  .goalCard {
+    gap: 10px;
+    padding: 16px;
+  }
+}
+
+@media (hover: hover) {
+  .radioCard:hover,
+  .interestCard:hover,
+  .goalCard:hover,
+  .skillRow:hover,
+  .ratingButton:hover {
+    border-color: rgba(230, 155, 83, 0.55);
+    background: var(--onboarding-raised);
+  }
+
+  .selected:hover,
+  .ratingSelected:hover {
+    border-color: var(--onboarding-accent);
+    background: var(--onboarding-accent-soft);
+  }
+
+  .ratingSelected:hover {
+    background: var(--onboarding-accent);
+  }
+}
+
+@media (forced-colors: active) {
+  .nativeRadio {
+    appearance: auto;
+  }
+
+  .selected,
+  .ratingSelected {
+    border: 2px solid Highlight;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step * {
+    transition: none;
+  }
+}

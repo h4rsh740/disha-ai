@@ -2,6 +2,7 @@
 // OpenRouter Provider — Server-side only
 // ============================================================
 import type { AIMessage, AIProviderResponse } from './types';
+import { hasUsableSecret } from './config';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL   = process.env.OPENROUTER_MODEL ?? 'google/gemini-2.0-flash-001';
@@ -26,7 +27,7 @@ export async function callOpenRouter(
   maxTokens = 2048,
   responseFormat: 'text' | 'json' = 'text',
 ): Promise<AIProviderResponse> {
-  if (!OPENROUTER_API_KEY) {
+  if (!hasUsableSecret(OPENROUTER_API_KEY)) {
     throw new Error('OPENROUTER_API_KEY is not set');
   }
 
@@ -54,7 +55,8 @@ export async function callOpenRouter(
       'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': 'https://dishaai.gov.in',
-      'X-Title': 'DishaAI — Career Counselling Platform',
+      // HTTP header values must stay ASCII-compatible for the Fetch API.
+      'X-Title': 'DishaAI - Career Counselling Platform',
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(30_000),

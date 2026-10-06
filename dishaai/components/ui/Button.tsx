@@ -46,7 +46,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center font-medium transition-all duration-150 cursor-pointer select-none',
+        'disha-button inline-flex items-center justify-center font-medium transition-all duration-200 cursor-pointer select-none',
         'disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none',
         'focus-visible:outline-2 focus-visible:outline-[#0ea5e9] focus-visible:outline-offset-2',
         variantClasses[variant],

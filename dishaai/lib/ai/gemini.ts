@@ -2,9 +2,10 @@
 // Gemini Provider — Server-side only
 // ============================================================
 import type { AIMessage, AIProviderResponse } from './types';
+import { hasUsableSecret } from './config';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL   = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+const GEMINI_MODEL   = process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite';
 
 interface GeminiContent {
   role: 'user' | 'model';
@@ -45,7 +46,7 @@ export async function callGemini(
   maxTokens = 2048,
   responseFormat: 'text' | 'json' = 'text',
 ): Promise<AIProviderResponse> {
-  if (!GEMINI_API_KEY) {
+  if (!hasUsableSecret(GEMINI_API_KEY)) {
     throw new Error('GEMINI_API_KEY is not set');
   }
 

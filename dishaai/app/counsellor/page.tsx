@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Button } from '@/components/ui/Button';
+import { LanguageSelector } from '@/components/gov/LanguageSelector';
 import { DEMO_CAREERS } from '@/data/careers';
 import { generateRecommendations } from '@/lib/recommendation/engine';
 import { cn } from '@/lib/utils';
@@ -44,6 +45,7 @@ export default function CounsellorPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
   const [sessionId] = useState(() => `session-${Date.now()}`);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -51,6 +53,8 @@ export default function CounsellorPage() {
   useEffect(() => {
     const saved = localStorage.getItem('disha_onboarding');
     if (saved) { try { setProfile(JSON.parse(saved)); } catch {} }
+    const savedLang = localStorage.getItem('disha_language_pref');
+    if (savedLang) setSelectedLanguage(savedLang);
   }, []);
 
   const studentProfile = useMemo(() => ({
@@ -119,6 +123,7 @@ export default function CounsellorPage() {
             career_goals: profile.career_goals,
           },
           skillGaps: topSkillGaps.map((g) => g.skill_name),
+          language: selectedLanguage,
         }),
       });
 
@@ -182,8 +187,11 @@ export default function CounsellorPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs px-2.5 py-1.5 bg-[#fffbeb] border border-[#fef3c7] text-[#d97706] rounded-full font-medium">
-                Grounded — Demo Data Only
+              <LanguageSelector
+                onLanguageChange={(code) => setSelectedLanguage(code)}
+              />
+              <span className="text-xs px-2.5 py-1.5 bg-[#fffbeb] border border-[#fef3c7] text-[#d97706] rounded-full font-medium hidden sm:inline">
+                MSDE & Bhashini Grounded
               </span>
               {messages.length > 0 && (
                 <Button variant="ghost" size="sm" icon={<RotateCcw size={14} />} onClick={clearChat}>

@@ -1,0 +1,8 @@
+# Root .gitignore
+.DS_Store
+.codenow/
+.opencode/
+
+# Never commit environment secrets
+**/.env*
+!**/.env.example

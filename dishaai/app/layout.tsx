@@ -1,3 +1,4 @@
+import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -20,25 +21,27 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} data-scroll-behavior="smooth">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className="bg-[#f0f4ff] text-[#1a2e5a] antialiased">
-        {children}
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#1a2e5a',
-              color: '#fff',
-              borderRadius: '12px',
-              fontSize: '14px',
-            },
-          }}
-        />
+      <body className="app-body bg-[#f0f4ff] text-[#1a2e5a] antialiased" suppressHydrationWarning>
+        <ClerkProvider>
+          {children}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#1a2e5a',
+                color: '#fff',
+                borderRadius: '12px',
+                fontSize: '14px',
+              },
+            }}
+          />
+        </ClerkProvider>
       </body>
     </html>
   );

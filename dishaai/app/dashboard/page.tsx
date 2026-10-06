@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Progress, ScoreRing } from '@/components/ui/Progress';
 import { CareerCard } from '@/components/career/CareerCard';
+import { GovSchemesCard } from '@/components/gov/GovSchemesCard';
 import { generateRecommendations, buildCareerTwin } from '@/lib/recommendation/engine';
 import { DEMO_CAREERS } from '@/data/careers';
 import type { OnboardingState, RecommendationScore } from '@/types';
@@ -285,6 +286,11 @@ export default function DashboardPage() {
                     <ArrowRight size={14} className="text-[#0284c7] mt-3 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </Link>
+              </div>
+
+              {/* Verified Government Schemes & Subsidies */}
+              <div className="mt-6">
+                <GovSchemesCard />
               </div>
             </div>
           </div>

@@ -22,8 +22,8 @@ export function Card({ children, className, hover = false, padding = 'md', onCli
     <div
       onClick={onClick}
       className={cn(
-        'bg-white border border-[#e2e8f0] rounded-2xl shadow-sm',
-        hover && 'transition-all duration-200 hover:shadow-[0_4px_20px_rgba(26,46,90,0.12)] hover:border-[#c5d9f0] hover:-translate-y-0.5 cursor-pointer',
+        'disha-card bg-white border border-[#e2e8f0] rounded-2xl shadow-sm',
+        hover && 'transition-all duration-200 hover:shadow-[0_12px_28px_rgba(26,46,90,0.12)] hover:border-[#c5d9f0] hover:-translate-y-0.5 cursor-pointer',
         paddingClasses[padding],
         className,
       )}
