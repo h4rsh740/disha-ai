@@ -145,6 +145,9 @@ window.__kbBoot = 'self.window = self; self.onmessage = e => { const d = e.data 
 }
 
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#f2ece2;
@@ -152,7 +155,7 @@ window.__kbBoot = 'self.window = self; self.onmessage = e => { const d = e.data 
     --hair:rgba(242,236,226,.16);
     --sans:"Inter",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
     --serif:"Instrument Serif",Georgia,"Times New Roman",serif;
-    --mincho:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
+    --mincho:"Noto Serif Devanagari","Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
   }
   *{margin:0;padding:0;box-sizing:border-box;font-weight:normal}
   html,body{height:100%}
@@ -331,8 +334,8 @@ window.__kbBoot = 'self.window = self; self.onmessage = e => { const d = e.data 
      keeps clear of it */
   @media (min-width:821px){
     .big.stack{flex-wrap:nowrap;align-items:flex-start}
-    .big.stack em{writing-mode:vertical-rl;transform:translateY(.02em);letter-spacing:.06em;
-      font-size:clamp(28px,4.2vw,82px);line-height:1}
+    .big.stack em{writing-mode:vertical-rl;transform:translateY(.02em);letter-spacing:.22em;
+      font-size:clamp(28px,4.2vw,82px);line-height:1.25}
   }
   /* a soft dark halo under the kanji, which are thin and cross lit paper
      and pale timber; the Latin is heavy enough without. It belongs to each
@@ -672,7 +675,7 @@ window.__kbBoot = 'self.window = self; self.onmessage = e => { const d = e.data 
 <div id="kindle">
   <canvas id="kindle-gl" aria-hidden="true"></canvas>
   <div class="kindle-label" role="progressbar" aria-label="Loading the workshop"
-       aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span>Kindling</span><b>0</b></div>
+       aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span>Loading</span><b>0</b></div>
 </div>
 <script>
 (() => {
@@ -1655,7 +1658,7 @@ ${EDGE}
   if (here){ initGL(); warmUp(); requestAnimationFrame(loop); }
 
   /* Slow connections: say so rather than burning quietly forever. */
-  const slow = setTimeout(() => { if (alive && target < 0.4) label.querySelector('span').textContent = 'Still kindling'; }, 12000);
+  const slow = setTimeout(() => { if (alive && target < 0.4) label.querySelector('span').textContent = 'Still loading'; }, 12000);
 
   window.__kbLoad = {
     t0,
@@ -1873,10 +1876,10 @@ ${EDGE}
         </div>
         <figure class="workshop-art">
           <div class="atelier-mark">
-            <img crossorigin="anonymous" class="atelier-seal" data-src="https://ublctyddhtbgaersvxxb.supabase.co/storage/v1/object/public/threeui-media/scene-images/kibori/9632d913de9cae7ff0868e7a483fbd4cd919a539c840e5f8541a74935fb5136c.webp" width="1254" height="1254"
+            <img crossorigin="anonymous" class="atelier-seal" data-src="/landing-pages/kibori-assets/kibori-atelier-seal-v2.webp" width="1254" height="1254"
               alt="Disha AI — career guidance seal" decoding="async">
           </div>
-          <img crossorigin="anonymous" class="workshop-print" data-src="https://ublctyddhtbgaersvxxb.supabase.co/storage/v1/object/public/threeui-media/scene-images/kibori/dc88d8a5843d37abb762101b03b054bb92e81629b258b6749062173836f3e8b5.webp" width="1536" height="1024"
+          <img crossorigin="anonymous" class="workshop-print" data-src="/landing-pages/kibori-assets/kibori-workshop-print-v2.webp" width="1536" height="1024"
             alt="Students exploring career paths with AI guidance across India." decoding="async">
           <figcaption><span>Disha AI</span><span>India-wide</span></figcaption>
         </figure>
@@ -16340,12 +16343,12 @@ return TabletopPhysics;
  *  0.  Index copy — numbers and text
  * ============================================================= */
 const INDEX = [
-  ['01','Kumiko','組子'],    ['02','Seigaiha','青海波'], ['03','Kigumi','木組'],
-  ['04','Yakisugi','焼杉'],  ['05','Nomi','鑿'],        ['06','Urushi','漆'],
-  ['07','Sashimono','指物'], ['08','Kanna','鉋'],
+  ['01','Discover','दिशा'],    ['02','Explore','पाठ्यक्रम'], ['03','Analyse','कौशल'],
+  ['04','Unlock','योजना'],    ['05','Simulate','मार्ग'],    ['06','Support','परिवार'],
+  ['07','Connect','परामर्श'],  ['08','Track','प्रगति'],
 ];
 document.getElementById('index').innerHTML =
-  INDEX.map(([n,r,k],i) => `<u aria-hidden="true">${n}</u><a href="#${r.toLowerCase()}" data-go="${i}">${r}<i lang="ja">${k}</i></a>`).join('');
+  INDEX.map(([n,r,k],i) => `<u aria-hidden="true">${n}</u><a href="#${r.toLowerCase()}" data-go="${i}">${r}<i lang="hi">${k}</i></a>`).join('');
 const indexRows = Array.from(document.querySelectorAll('#index a'));
 
 /* ============================================================= *
@@ -23931,12 +23934,18 @@ function splitRun(host){
   const base = host.getBoundingClientRect();
   const node = gh.firstChild, range = document.createRange();
   const out = [];
-  for (let i = 0; i < text.length; i++){
-    if (text[i] === ' ') continue;
-    range.setStart(node, i); range.setEnd(node, i + 1);
+  const segs = typeof Intl !== 'undefined' && Intl.Segmenter
+    ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)]
+    : text.split('').map((char, index) => ({ segment: char, index }));
+
+  for (const seg of segs){
+    if (!seg.segment || /^\s+$/.test(seg.segment)) continue;
+    range.setStart(node, seg.index);
+    range.setEnd(node, seg.index + seg.segment.length);
     const r = range.getBoundingClientRect();
     const l = document.createElement('span');
-    l.className = 'l'; l.textContent = text[i];
+    l.className = 'l';
+    l.textContent = seg.segment;
     l.setAttribute('aria-hidden', 'true');
     l.style.left = (r.left - base.left).toFixed(2) + 'px';
     l.style.top  = (r.top  - base.top ).toFixed(2) + 'px';
@@ -24729,8 +24738,16 @@ const lockupEl = document.getElementById('lockup');
 const lkGlyphs = [];
 {
   const wrap = (el, re, kind) => {
-    const parts = el.textContent.split(re);
+    if (!el) return;
+    const text = el.textContent;
     el.textContent = '';
+    let parts;
+    if (re.toString() === '/()/' && typeof Intl !== 'undefined' && Intl.Segmenter){
+      const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+      parts = [...seg.segment(text)].map(s => s.segment);
+    } else {
+      parts = text.split(re);
+    }
     for (const t of parts){
       if (!t) continue;
       if (/^\s+$/.test(t)){ el.appendChild(document.createTextNode(t)); continue; }
@@ -25229,19 +25246,17 @@ function heroParts(group, anchor, margin){
     (o.visible && !o.isLight && box.containsBox(b.setFromObject(o))));
 }
 function inspectRegister(){
-  inspectable(0, heroParts(st1, kumikoLattice, 0.2), 'Asanoha panel', '組子', 'A thousand hinoki strips, and not one nail');
-  inspectable(1, heroParts(st2, reliefPanel, 0.25), 'Seigaiha board', '青海波', 'One sugi board, cut wave by wave');
-  inspectable(2, [jointBeam && jointBeam.parent], 'Wedged through-tenon', '込栓', 'Two timbers and a wedge — no glue, no steel');
-  for (const b of charBoards) inspectable(3, b, 'Yakisugi board', '焼杉', 'Cedar charred until the weather cannot get in');
-  inspectable(4, [nomiChisel], 'Oire-nomi', '鑿', 'Soft iron forge-welded to a sliver of hard steel');
-  for (const c of (nomiSet || [])) inspectable(4, [c.o], 'Oire-nomi', '鑿', 'Soft iron forge-welded to a sliver of hard steel');
-  inspectable(4, nomiClothParts.concat((nomiSet || []).map(c => c.o)), 'Dogu-maki', '道具巻', 'Indigo canvas, a sleeve for every blade', false, 0, [nomiClothParts[2]]);
-  inspectable(5, [urushiBowl, urushiFoot], 'Lacquered bowl', '漆', 'Forty coats, and gold dusted into the last', false, 0.79);
-  inspectable(5, [urushiBrush], 'Urushi hake', '刷毛', 'The hair runs the whole length of the body');
-  inspectable(6, st7.children.filter(o => !o.isLight), 'Tansu', '箪笥', 'Dovetailed, and the drawers fall on their own air', true);
-  /* tipped at most 45 degrees to the eye, as the bowl: tipped 70, its
-     translucent shaving was seen along its length, a streaky smear */
-  inspectable(7, [kannaPlane], 'Kanna', '鉋', 'Pulled toward you; the shaving comes off whole', false, 0.79);
+  inspectable(0, heroParts(st1, kumikoLattice, 0.2), 'Discover Path', 'दिशा', 'Explore careers matching your strengths and passions');
+  inspectable(1, heroParts(st2, reliefPanel, 0.25), 'Explore Courses', 'पाठ्यक्रम', 'Over 1,800 vocational and skill certifications across India');
+  inspectable(2, [jointBeam && jointBeam.parent], 'Skill Analysis', 'कौशल', 'Bridge the gap between current skills and career requirements');
+  for (const b of charBoards) inspectable(3, b, 'Govt Schemes', 'योजना', 'Scholarships, stipends, and subsidies available for you');
+  inspectable(4, [nomiChisel], 'Career Roadmap', 'मार्ग', 'Personalised step-by-step milestones to your goal');
+  for (const c of (nomiSet || [])) inspectable(4, [c.o], 'Career Roadmap', 'मार्ग', 'Personalised step-by-step milestones to your goal');
+  inspectable(4, nomiClothParts.concat((nomiSet || []).map(c => c.o)), 'Resource Toolkit', 'उपकरण', 'Practical resources and study material for exams');
+  inspectable(5, [urushiBowl, urushiFoot], 'Family Portal', 'परिवार', 'Guidance in Indian languages for parents and guardians');
+  inspectable(5, [urushiBrush], 'Support Network', 'सहयोग', 'Community mentors and expert advisors');
+  inspectable(6, st7.children.filter(o => !o.isLight), 'Counsellor Desk', 'परामर्श', 'Live chat with verified career counsellors');
+  inspectable(7, [kannaPlane], 'Progress Tracker', 'प्रगति', 'Real-time dashboard of applications and goals');
   /* lights light layer 1 as well, or the lifted item would go black */
   scene.traverse(o => { if (o.isLight) o.layers.enable(1); });
 }
