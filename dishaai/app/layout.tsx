@@ -1,10 +1,19 @@
-import { ClerkProvider } from '@clerk/nextjs';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Toaster } from 'react-hot-toast';
+import './workspace.css';
+import { ClientToaster } from '@/components/ui/ClientToaster';
+import { AuthProvider } from '@/components/auth/AuthProvider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
+  themeColor: '#0a0806',
+};
 
 export const metadata: Metadata = {
   title: 'DishaAI — Career Counselling & Family Decision Platform',
@@ -21,27 +30,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable} data-scroll-behavior="smooth">
+    <html lang="en" className={inter.variable} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className="app-body bg-[#f0f4ff] text-[#1a2e5a] antialiased" suppressHydrationWarning>
-        <ClerkProvider>
+      <body className="app-body bg-[#0a0806] text-[#f6efe5] antialiased" suppressHydrationWarning>
+        <AuthProvider>
           {children}
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#1a2e5a',
-                color: '#fff',
-                borderRadius: '12px',
-                fontSize: '14px',
-              },
-            }}
-          />
-        </ClerkProvider>
+          <ClientToaster />
+        </AuthProvider>
       </body>
     </html>
   );

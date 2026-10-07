@@ -550,16 +550,16 @@
 
 @media (max-width: 600px) {
   .page {
-    padding: 0 20px;
+    padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(16px, env(safe-area-inset-left, 0px));
   }
 
   .header {
-    min-height: 78px;
+    min-height: 68px;
     gap: 12px;
   }
 
   .wordmark {
-    font-size: 31px;
+    font-size: 28px;
   }
 
   .homeLink {
@@ -568,8 +568,8 @@
   }
 
   .layout {
-    gap: 32px;
-    padding: 30px 0 46px;
+    gap: 22px;
+    padding: 22px 0 32px;
   }
 
   .eyebrow {
@@ -578,13 +578,15 @@
   }
 
   .heroTitle {
-    margin: 20px 0 17px;
-    font-size: clamp(43px, 11vw, 62px);
+    margin: 12px 0 10px;
+    font-size: clamp(32px, 8vw, 40px);
+    line-height: 1.08;
+    overflow-wrap: anywhere;
   }
 
   .heroDescription {
-    font-size: 14px;
-    line-height: 1.8;
+    font-size: 13px;
+    line-height: 1.65;
   }
 
   .benefits {
@@ -597,7 +599,7 @@
 
   .progressRail {
     gap: 7px;
-    margin-bottom: 22px;
+    margin-bottom: 18px;
   }
 
   .railLabel {
@@ -617,11 +619,11 @@
   }
 
   .stepContent {
-    padding: 24px 20px;
+    padding: 20px 14px;
   }
 
   .navigation {
-    padding: 16px 20px 20px;
+    padding: 14px;
     border-radius: 0 0 16px 16px;
   }
 
@@ -638,6 +640,7 @@
 
   .nextButton {
     flex: 1;
+    min-width: 0;
     max-width: 210px;
   }
 
@@ -647,6 +650,13 @@
     padding: 18px 0;
     font-size: 11px;
   }
+}
+
+@media (max-width: 380px) {
+  .railLabel { font-size: 9px; }
+  .progressRail { gap: 5px; }
+  .navigationButtons { flex-wrap: wrap; }
+  .nextButton { max-width: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -33,10 +33,10 @@ profile, conversation, or message in PostgreSQL.
 
 | Stage | Current code and behavior | Status / next integration |
 | --- | --- | --- |
-| **Authenticate** | No Clerk package, middleware, sign-in route, or protected route is present. `app/onboarding/page.tsx` starts without a session and the AI routes accept client-supplied context. | **Planned integration / gap.** Add Clerk middleware and a server-side adapter, map the verified Clerk subject to `profiles.auth_user_id`, and pass only verified identity into database queries. The SQL schema is provider-neutral and does not itself connect Clerk. |
+| **Authenticate** | Firebase Authentication client provider, custom sign-in/sign-up forms with Google OAuth and email/password are configured. `app/onboarding/page.tsx` starts with optional local state or authenticated session. | **Integrated locally with Firebase.** Add server-side token verification and map the verified Firebase UID (`auth_user_id`) into database queries. |
 | **Understand** | The five-step onboarding UI validates required answers locally. `app/dashboard/page.tsx` rebuilds a `StudentProfile`-shaped object from local storage; `lib/recommendation/engine.ts` computes deterministic interest, skill, education, market-demo, and financial scores. | **Implemented locally for demo behavior.** Intent classification and server-backed session context from the PDF are not implemented. |
 | **Validate** | Onboarding blocks incomplete steps. AI routes now read bounded JSON once, validate common question/history/career fields, return structured 400 errors, and cap client-supplied profile/list values before prompt construction. | **Implemented locally for current AI routes.** Add content-type, permission, rate, and upload checks before accepting production input. |
-| **Protect** | `lib/security/prompt-injection.ts` and `lib/ai/pipeline.ts` inspect questions/history/retrieved chunks, block high-risk signals, and delimit allowed untrusted data. Counselling and family FAQ routes preflight the policy, and the provider layer uses the protected message path. Provider keys remain server-side. | **Implemented locally; identity boundary remains planned.** Add Clerk authorization and a least-privilege tool/data boundary. Heuristics are defense-in-depth and do not detect every attack. |
+| **Protect** | `lib/security/prompt-injection.ts` and `lib/ai/pipeline.ts` inspect questions/history/retrieved chunks, block high-risk signals, and delimit allowed untrusted data. Counselling and family FAQ routes preflight the policy, and the provider layer uses the protected message path. Provider keys remain server-side. | **Implemented locally; identity boundary remains planned.** Add Firebase token authorization and a least-privilege tool/data boundary. Heuristics are defense-in-depth and do not detect every attack. |
 | **Retrieve** | `data/careers.ts` remains an in-process demo knowledge base. `lib/knowledge/retrieval.ts` provides deterministic lexical retrieval over demo careers and pathways, and provider calls now include the retrieved chunks as explicitly delimited data. There is no embedding call or database semantic query. | **Implemented locally as a demo; external RAG planned.** Run `db/schema.sql`, ingest reviewed documents into `knowledge_documents`/`knowledge_chunks`, generate matching 768-dimensional embeddings, and query the pgvector cosine index. Retrieval must filter to trusted/ready documents. |
 | **Generate** | `lib/ai/provider.ts` is the common AI service layer. `lib/ai/router.ts` calls Gemini first by default and falls back to OpenRouter for failed/empty or recognized transient failures. Career explanation, family FAQ/report, counselling, action-plan, and skill-gap calls share the local retrieval context where applicable. | **Implemented locally when provider keys are configured; external setup remains.** Gemini and OpenRouter are not connected by this repository until their server-side environment variables are supplied. |
 | **Guard** | `lib/security/guardrails.ts` now runs after provider responses from the shared provider layer. It normalizes output, detects secret leakage and instruction wrappers, rejects unsupported sensitive claims without supplied grounding tokens, and falls back to safe text/structured data. | **Implemented locally.** A prompt is not a substitute for an output guardrail; persistent review and policy tuning remain production work. |
@@ -61,7 +61,7 @@ own profile, skills, conversations, and messages. Knowledge and audit rows have
 no general end-user policy; they require an explicitly privileged server role
 or admin profile. The RLS helper assumes an adapter has already verified the
 request and set a trusted database claim. It does **not** claim that the current
-app enforces Clerk.
+app enforces external identity.
 
 ### AI providers
 
@@ -79,7 +79,7 @@ work. It does not mean either provider is configured in a deployment.
 ### Planned production path
 
 ```text
-Clerk session
+Firebase session
   -> authenticated Next.js server route
   -> input/permission and prompt-injection checks
   -> trusted context + pgvector retrieval
@@ -92,7 +92,7 @@ External services named in the PDF are planned integrations:
 
 | Service | Intended responsibility | Current repository state |
 | --- | --- | --- |
-| Clerk | Sign-in, sessions, route protection, verified subject | Not installed or wired |
+| Firebase Auth | Sign-in, sessions, route protection, verified subject | Client SDK & forms wired; env keys required for live auth |
 | PostgreSQL + pgvector | Profiles, conversations, knowledge chunks, vector similarity, audit records | Schema artifact added; no app connection |
 | Gemini | Primary generation provider | Provider client exists; requires server-side key |
 | OpenRouter | Backup/gateway provider | Provider client exists; requires server-side key |

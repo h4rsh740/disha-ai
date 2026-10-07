@@ -1,13 +1,15 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useId, useState, useMemo, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import {
-  Users, CheckCircle2, Clock, TrendingUp, BookOpen, Building,
+  CheckCircle2, Clock, TrendingUp, BookOpen, Building,
   ChevronDown, ChevronUp, ArrowRight, Shield, Briefcase, GraduationCap,
-  FileText, Share2, HelpCircle
+  FileText, HelpCircle
 } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
+import { Disclosure } from '@/components/ui/Disclosure';
 import { Button } from '@/components/ui/Button';
 import { DEMO_CAREERS, DEMO_CAREER_PATHS, FAMILY_FAQ } from '@/data/careers';
 import { generateRecommendations } from '@/lib/recommendation/engine';
@@ -25,12 +27,26 @@ const DEMO_PROFILE: OnboardingState = {
   training_duration: 'medium', budget_range: 'zero', career_goals: ['quick_job'],
 };
 
+function subscribeToProfile(onStoreChange: () => void) {
+  window.addEventListener('storage', onStoreChange);
+  return () => window.removeEventListener('storage', onStoreChange);
+}
+
+function readStoredProfile() {
+  return localStorage.getItem('disha_onboarding') ?? '';
+}
+
+function readServerProfile() {
+  return null;
+}
+
 interface FAQCardProps {
   question: string;
   career: Career;
 }
 
 function FAQCard({ question, career }: FAQCardProps) {
+  const answerId = useId();
   const [open, setOpen] = useState(false);
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
@@ -65,51 +81,55 @@ function FAQCard({ question, career }: FAQCardProps) {
   const Icon = iconMap[question] ?? HelpCircle;
 
   return (
-    <button
-      onClick={load}
-      className={cn(
-        'w-full text-left bg-white border rounded-2xl p-5 transition-all duration-200 group',
-        open ? 'border-[#0ea5e9] shadow-[0_0_0_2px_rgba(14,165,233,0.1)]' : 'border-[#e2e8f0] hover:border-[#c5d9f0] hover:shadow-sm',
-      )}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors',
-            open ? 'bg-[#0ea5e9]' : 'bg-[#f0f4ff]',
-          )}>
-            <Icon size={17} className={open ? 'text-white' : 'text-[#1a2e5a]'} />
-          </div>
-          <span className="font-semibold text-[#1a2e5a] text-sm">{question}</span>
-        </div>
-        {open ? <ChevronUp size={16} className="text-[#94a3b8]" /> : <ChevronDown size={16} className="text-[#94a3b8]" />}
-      </div>
+    <div className="paper-panel">
+      <button
+        type="button"
+        onClick={load}
+        aria-expanded={open}
+        aria-controls={answerId}
+        className={cn(
+          'group w-full min-h-11 rounded-sm px-4 py-3 text-left transition-colors hover:bg-[var(--ui-surface-2)] focus-visible:outline-2 focus-visible:outline-[var(--ui-accent)] focus-visible:outline-offset-2',
+          open && 'bg-[var(--ui-surface-2)]',
+        )}
+      >
+        <span className="flex items-center justify-between gap-3">
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="ui-icon" aria-hidden="true"><Icon size={16} /></span>
+            <span className="text-sm font-medium text-[var(--ui-text)]">{question}</span>
+          </span>
+          <span className="shrink-0 text-[var(--ui-faint)] group-hover:text-[var(--ui-accent)]" aria-hidden="true">
+            {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </span>
+        </span>
+      </button>
 
-      {open && (
-        <div className="mt-4 ml-12">
-          {loading ? (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-[#0ea5e9] border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm text-[#64748b]">Getting answer...</span>
-            </div>
-          ) : (
-            <p className="text-sm text-[#475569] leading-relaxed">{answer}</p>
-          )}
-        </div>
-      )}
-    </button>
+      <div id={answerId} hidden={!open}>
+        {open && (
+          <div className="mx-4 border-t border-[var(--ui-border)] py-3">
+            {loading ? (
+              <div className="flex items-center gap-2" role="status">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--ui-accent)] border-t-transparent motion-reduce:animate-none" aria-hidden="true" />
+                <span className="text-sm text-[var(--ui-muted)]">Getting answer...</span>
+              </div>
+            ) : (
+              <p className="text-sm leading-relaxed text-[var(--ui-muted)]">{answer}</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
 export default function FamilyPage() {
-  const [profile, setProfile] = useState<OnboardingState>(DEMO_PROFILE);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('disha_onboarding');
-    if (saved) { try { setProfile(JSON.parse(saved)); } catch {} }
-    setLoaded(true);
-  }, []);
+  const savedProfile = useSyncExternalStore(subscribeToProfile, readStoredProfile, readServerProfile);
+  const profile = useMemo<OnboardingState>(() => {
+    if (savedProfile) {
+      try { return JSON.parse(savedProfile); } catch {}
+    }
+    return DEMO_PROFILE;
+  }, [savedProfile]);
+  const loaded = savedProfile !== null;
 
   const studentProfile = useMemo(() => ({
     id: 'demo-001', user_id: 'demo-user',
@@ -137,203 +157,148 @@ export default function FamilyPage() {
   const primaryPathway = pathways[0];
 
   return (
-    <div className="min-h-screen bg-[#f0f4ff] flex">
+    <div className="app-page">
       <Sidebar userName={profile.name ?? 'Student'} userRole="student" />
 
-      <main className="flex-1 ml-[240px]">
-        <div className="max-w-[1040px] mx-auto px-8 py-8">
+      <main className="app-main">
+        <div className="app-content">
+          <PageHeader
+            chapter="04"
+            eyebrow="Family decision mode"
+            title={<>A future to understand, <em>together.</em></>}
+            description="Simple, clear guidance for parents and families. Understand your child's career path and make room for a good conversation."
+            actions={<Link href="/family/report" data-variant="primary" className="disha-button inline-flex items-center justify-center gap-2 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2"><FileText size={14} aria-hidden="true" /> Family report <ArrowRight size={14} aria-hidden="true" /></Link>}
+          />
 
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 bg-[#1a2e5a] rounded-lg flex items-center justify-center">
-                <Users size={16} className="text-[#0ea5e9]" />
-              </div>
-              <span className="text-sm font-semibold text-[#0284c7]">Family Decision Mode</span>
-            </div>
-            <h1 className="text-2xl font-bold text-[#1a2e5a]">
-              Understand Your Child's Career Path
-            </h1>
-            <p className="text-[#64748b] mt-1">
-              Simple, clear guidance designed for parents and families — no technical jargon.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-6">
-            {/* Main content */}
-            <div className="col-span-2 space-y-5">
-
-              {/* Recommended career */}
-              <div className="bg-[#1a2e5a] rounded-3xl p-6 text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-[#0ea5e9]/10 rounded-full -translate-y-1/4 translate-x-1/4" />
-                <div className="relative z-10">
-                  <p className="text-[#8aaee0] text-sm mb-2">Recommended career for {profile.name ?? 'your child'}</p>
-                  <h2 className="text-2xl font-bold mb-2">{topCareer.name}</h2>
-                  <p className="text-[#c5d9f0] leading-relaxed text-sm mb-4">
-                    {topCareer.description}
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2">
-                      <Clock size={14} className="text-[#0ea5e9]" />
-                      <span className="text-sm">{topCareer.training_duration} training</span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2">
-                      <GraduationCap size={14} className="text-[#0ea5e9]" />
-                      <span className="text-sm">{topCareer.education_requirement}</span>
-                    </div>
-                  </div>
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+            <div className="min-w-0 space-y-3 lg:col-span-8">
+              <section className="dark-panel p-4 sm:p-5" aria-labelledby="family-recommended-career">
+                <p className="eyebrow">Recommended career for {profile.name ?? 'your child'}</p>
+                <h2 id="family-recommended-career" className="mb-2 font-[family-name:var(--ui-serif)] text-3xl leading-tight text-[var(--ui-text)]">{topCareer.name}</h2>
+                <p className="text-sm leading-relaxed text-[var(--ui-muted)]">{topCareer.description}</p>
+                <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--ui-border)] pt-3">
+                  <span className="ui-chip">
+                    <Clock size={13} className="shrink-0 text-[var(--ui-accent)]" aria-hidden="true" />
+                    {topCareer.training_duration} training
+                  </span>
+                  <span className="ui-chip">
+                    <GraduationCap size={14} className="shrink-0 text-[var(--ui-accent)]" aria-hidden="true" />
+                    {topCareer.education_requirement}
+                  </span>
                 </div>
-              </div>
+              </section>
 
-              {/* Why it suits */}
-              <Card padding="md">
-                <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle2 size={16} className="text-[#059669]" />
-                  <h2 className="font-bold text-[#1a2e5a]">
-                    Why this career suits {profile.name ?? 'your child'}
-                  </h2>
-                </div>
-                <div className="space-y-3">
+              <Disclosure title={`Why this career suits ${profile.name ?? 'your child'}`} description={`${topCareer.why_choose.length} reasons to discuss together`} icon={<CheckCircle2 size={17} />}>
+                <ul className="divide-y divide-[var(--ui-border)]">
                   {topCareer.why_choose.map((reason, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3 bg-[#f8faff] rounded-xl">
-                      <div className="w-5 h-5 rounded-full bg-[#ecfdf5] flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <CheckCircle2 size={11} className="text-[#059669]" />
-                      </div>
-                      <p className="text-sm text-[#475569] leading-relaxed">{reason}</p>
-                    </div>
+                    <li key={i} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                      <CheckCircle2 size={14} className="mt-1 shrink-0 text-[var(--ui-success)]" aria-hidden="true" />
+                      <p className="text-sm leading-relaxed text-[var(--ui-muted)]">{reason}</p>
+                    </li>
                   ))}
-                </div>
-              </Card>
+                </ul>
+              </Disclosure>
 
-              {/* Training journey */}
               {primaryPathway && (
-                <Card padding="md">
-                  <div className="flex items-center gap-2 mb-4">
-                    <TrendingUp size={16} className="text-[#7c3aed]" />
-                    <h2 className="font-bold text-[#1a2e5a]">The Training Journey</h2>
-                    <span className="text-xs px-2 py-0.5 bg-[#f5f3ff] text-[#7c3aed] rounded-full font-medium">
-                      Step by step
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                    {primaryPathway.steps.slice(0, 5).map((step, i) => (
-                      <div key={step.id} className="flex items-start gap-3">
-                        <div className="flex flex-col items-center">
-                          <div className="w-7 h-7 rounded-full bg-[#1a2e5a] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                <Disclosure title="The training journey" description={`${primaryPathway.steps.length} steps · ${primaryPathway.duration}`} icon={<TrendingUp size={17} />}>
+                  <ol>
+                    {primaryPathway.steps.map((step, i) => (
+                      <li key={step.id} className="relative flex items-start gap-3 pb-5 last:pb-0">
+                        <div className="relative flex flex-col items-center">
+                          <span className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-[var(--ui-border)] bg-[var(--ui-surface-2)] text-xs font-medium text-[var(--ui-accent)]">
                             {i + 1}
-                          </div>
-                          {i < 4 && <div className="w-0.5 h-4 bg-[#e2e8f0] mt-1" />}
+                          </span>
                         </div>
-                        <div className="flex-1 pb-2">
-                          <p className="font-semibold text-sm text-[#1a2e5a]">{step.title}</p>
-                          <p className="text-xs text-[#64748b] mt-0.5">{step.description}</p>
-                          <span className="text-[11px] text-[#0284c7] mt-1 inline-block">⏱ {step.duration}</span>
+                        {i < primaryPathway.steps.length - 1 && <span className="absolute bottom-0 left-[13px] top-7 w-px bg-[var(--ui-border)]" aria-hidden="true" />}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-[var(--ui-text)]">{step.title}</p>
+                          <p className="mt-1 text-xs leading-relaxed text-[var(--ui-muted)]">{step.description}</p>
+                          <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-[var(--ui-faint)]"><Clock size={11} aria-hidden="true" />{step.duration}</span>
                         </div>
-                      </div>
+                      </li>
                     ))}
-                  </div>
-                </Card>
+                  </ol>
+                </Disclosure>
               )}
 
-              {/* Career opportunities */}
-              <div className="grid grid-cols-2 gap-4">
-                <Card padding="md">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Briefcase size={15} className="text-[#0284c7]" />
-                    <h3 className="font-semibold text-[#1a2e5a] text-sm">Career Opportunities</h3>
-                  </div>
-                  <ul className="space-y-1.5">
-                    {topCareer.job_roles.slice(0, 4).map((role) => (
-                      <li key={role} className="flex items-center gap-2 text-sm text-[#475569]">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#0284c7] flex-shrink-0" />
+              <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
+                <Disclosure title="Career opportunities" description={`${topCareer.job_roles.length} job roles`} icon={<Briefcase size={16} />}>
+                  <ul className="space-y-2">
+                    {topCareer.job_roles.map((role) => (
+                      <li key={role} className="flex items-start gap-2 text-sm leading-relaxed text-[var(--ui-muted)]">
+                        <span className="mt-2 h-1 w-1 shrink-0 bg-[var(--ui-accent)]" aria-hidden="true" />
                         {role}
                       </li>
                     ))}
                   </ul>
-                </Card>
-                <Card padding="md">
-                  <div className="flex items-center gap-2 mb-3">
-                    <BookOpen size={15} className="text-[#059669]" />
-                    <h3 className="font-semibold text-[#1a2e5a] text-sm">Further Studies</h3>
-                  </div>
-                  <ul className="space-y-1.5">
-                    {topCareer.further_education.slice(0, 3).map((edu) => (
-                      <li key={edu} className="flex items-center gap-2 text-sm text-[#475569]">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#059669] flex-shrink-0" />
+                </Disclosure>
+                <Disclosure title="Further studies" description={`${topCareer.further_education.length} education options`} icon={<BookOpen size={16} />}>
+                  <ul className="space-y-2">
+                    {topCareer.further_education.map((edu) => (
+                      <li key={edu} className="flex items-start gap-2 text-sm leading-relaxed text-[var(--ui-muted)]">
+                        <span className="mt-2 h-1 w-1 shrink-0 bg-[var(--ui-success)]" aria-hidden="true" />
                         {edu}
                       </li>
                     ))}
                   </ul>
-                </Card>
+                </Disclosure>
               </div>
 
-              {/* FAQ Section */}
-              <div>
-                <h2 className="font-bold text-[#1a2e5a] text-lg mb-4 flex items-center gap-2">
-                  <HelpCircle size={18} className="text-[#0284c7]" />
-                  Questions Families Ask
+              <section aria-labelledby="family-faq-title" className="pt-2">
+                <h2 id="family-faq-title" className="section-title mb-3 flex items-center gap-2">
+                  <HelpCircle size={18} className="shrink-0 text-[var(--ui-accent)]" aria-hidden="true" />
+                  Questions families ask
                 </h2>
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
                   {FAMILY_FAQ.map((faq) => (
-                    <FAQCard key={faq.id} question={faq.question} career={topCareer} />
+                    <FAQCard key={`${topCareer.id}-${faq.id}`} question={faq.question} career={topCareer} />
                   ))}
                 </div>
-              </div>
+              </section>
             </div>
 
-            {/* Right sidebar */}
-            <div className="col-span-1 space-y-4">
-
-              {/* Generate report CTA */}
-              <div className="bg-[#1a2e5a] rounded-2xl p-5 text-white">
-                <FileText size={20} className="text-[#0ea5e9] mb-3" />
-                <h3 className="font-bold text-base mb-2">Official Career Report</h3>
-                <p className="text-sm text-[#8aaee0] mb-4 leading-snug">
-                  Generate a complete, printable career report to discuss with your family.
+            <aside className="min-w-0 space-y-3 lg:col-span-4" aria-label="Family resources">
+              <div className="dark-panel p-4">
+                <h2 className="section-title mb-2 flex items-center gap-2"><FileText size={18} aria-hidden="true" /> Family career report</h2>
+                <p className="ui-note mb-3">
+                  A personalised, printable career report to discuss around the table.
                 </p>
-                <Link href="/family/report">
-                  <Button variant="secondary" size="md" fullWidth icon={<ArrowRight size={15} />} iconPosition="right">
+                <Link href="/family/report" className="block">
+                  <Button variant="primary" size="md" fullWidth icon={<ArrowRight size={15} aria-hidden="true" />} iconPosition="right">
                     Generate Report
                   </Button>
                 </Link>
               </div>
 
-              {/* Entrepreneur potential */}
-              <Card padding="md">
-                <div className="flex items-center gap-2 mb-3">
-                  <Building size={15} className="text-[#d97706]" />
-                  <h3 className="font-semibold text-[#1a2e5a] text-sm">Business Opportunities</h3>
-                </div>
-                <p className="text-xs text-[#64748b] mb-3">
+              <Disclosure title="Business opportunities" description={`${topCareer.entrepreneurship_options.length} ideas for the future`} icon={<Building size={16} />}>
+                <p className="ui-note mb-3">
                   After gaining experience, your child could start their own business:
                 </p>
-                <ul className="space-y-1.5">
-                  {topCareer.entrepreneurship_options.slice(0, 3).map((opt) => (
-                    <li key={opt} className="flex items-start gap-2 text-xs text-[#475569]">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#d97706] flex-shrink-0 mt-1.5" />
+                <ul className="space-y-2">
+                  {topCareer.entrepreneurship_options.map((opt) => (
+                    <li key={opt} className="flex items-start gap-2 text-xs leading-relaxed text-[var(--ui-muted)]">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 bg-[var(--ui-faint)]" aria-hidden="true" />
                       {opt}
                     </li>
                   ))}
                 </ul>
-              </Card>
+              </Disclosure>
 
-              {/* Demo notice */}
-              <div className="p-4 bg-[#fffbeb] border border-[#fef3c7] rounded-2xl">
-                <p className="text-xs font-semibold text-[#d97706] mb-1">Demo Mode</p>
-                <p className="text-xs text-[#92400e] leading-relaxed">
+              <div className="ui-alert">
+                <p className="mb-2 text-[10px] font-medium uppercase tracking-widest text-[var(--ui-accent)]">Demo mode</p>
+                <p className="ui-note">
                   This is illustrative career information. AI answers are grounded in our career knowledge base only — not official statistics.
                 </p>
               </div>
 
-              {/* Career simulator link */}
-              <Card padding="md" className="bg-[#f0f4ff] border-[#c5d9f0]">
-                <h3 className="font-semibold text-[#1a2e5a] text-sm mb-2">See Full Career Path</h3>
-                <p className="text-xs text-[#64748b] mb-3">View the step-by-step training journey in detail.</p>
-                <Link href={`/career-path/${topCareer.id}`}>
+              <Card padding="md">
+                <h2 className="section-title mb-2">See the full career path.</h2>
+                <p className="ui-note mb-3">View the step-by-step training journey in detail.</p>
+                <Link href={`/career-path/${topCareer.id}`} className="block">
                   <Button variant="outline" size="sm" fullWidth>Open Career Simulator</Button>
                 </Link>
               </Card>
-            </div>
+            </aside>
           </div>
         </div>
       </main>

@@ -1,9 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   CheckCircle2, Clock, Award, Briefcase, TrendingUp, ChevronDown, ChevronUp, Zap
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import type { CareerPathStep } from '@/types';
 
 interface CareerTimelineProps {
@@ -12,97 +11,73 @@ interface CareerTimelineProps {
 }
 
 const stepTypeConfig = {
-  education: { color: '#1a2e5a', bg: '#eef4fb', icon: Award, label: 'Education' },
-  training: { color: '#0284c7', bg: '#e0f2fe', icon: Zap, label: 'Training' },
-  certification: { color: '#d97706', bg: '#fffbeb', icon: Award, label: 'Certification' },
-  work: { color: '#059669', bg: '#ecfdf5', icon: Briefcase, label: 'Work' },
-  advancement: { color: '#7c3aed', bg: '#f5f3ff', icon: TrendingUp, label: 'Growth' },
+  education: { color: 'var(--ui-muted)', icon: Award, label: 'Education' },
+  training: { color: 'var(--ui-accent)', icon: Zap, label: 'Training' },
+  certification: { color: 'var(--ui-faint)', icon: Award, label: 'Certification' },
+  work: { color: 'var(--ui-success)', icon: Briefcase, label: 'Work' },
+  advancement: { color: 'var(--ui-success)', icon: TrendingUp, label: 'Growth' },
 };
 
 interface StepNodeProps {
   step: CareerPathStep;
   isLast: boolean;
-  isActive?: boolean;
 }
 
-function StepNode({ step, isLast, isActive = false }: StepNodeProps) {
+function StepNode({ step, isLast }: StepNodeProps) {
   const [expanded, setExpanded] = useState(false);
+  const detailsId = useId();
+  const titleId = useId();
   const config = stepTypeConfig[step.step_type];
   const Icon = config.icon;
 
   return (
-    <div className="relative flex gap-4">
-      {/* Timeline line */}
+    <li className="relative flex gap-3 sm:gap-4">
       {!isLast && (
-        <div
-          className="absolute left-5 top-10 bottom-0 w-0.5 z-0"
-          style={{
-            background: 'linear-gradient(180deg, #0ea5e9 0%, #e2e8f0 100%)',
-          }}
-        />
+        <span className="absolute bottom-0 left-[17px] top-12 w-px bg-[var(--ui-border)]" aria-hidden="true" />
       )}
 
-      {/* Node dot */}
-      <div className="relative z-10 flex-shrink-0">
-        <div
-          className={cn(
-            'w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-200',
-            isActive ? 'scale-110 shadow-md' : '',
-          )}
-          style={{
-            backgroundColor: config.bg,
-            borderColor: config.color,
-          }}
-        >
-          <Icon size={18} style={{ color: config.color }} />
-        </div>
+      <div className="ui-icon relative z-10 mt-4" style={{ color: config.color }} aria-hidden="true">
+        <Icon size={16} />
       </div>
 
-      {/* Content */}
-      <div className="flex-1 pb-8 min-w-0">
+      <div className="paper-panel mb-3 min-w-0 flex-1 sm:mb-5">
         <button
+          type="button"
           onClick={() => setExpanded((p) => !p)}
-          className={cn(
-            'w-full text-left bg-white border rounded-xl p-4 transition-all duration-200 group',
-            expanded
-              ? 'border-[#0ea5e9] shadow-[0_0_0_2px_rgba(14,165,233,0.15)]'
-              : 'border-[#e2e8f0] hover:border-[#c5d9f0] hover:shadow-sm',
-          )}
+          aria-expanded={expanded}
+          aria-controls={detailsId}
+          aria-labelledby={titleId}
+          className="group w-full rounded-sm p-3 text-left transition-colors hover:bg-[var(--ui-surface-2)] focus-visible:outline-2 focus-visible:outline-[var(--ui-accent)] focus-visible:outline-offset-2 sm:p-5"
         >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span
-                  className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                  style={{ color: config.color, backgroundColor: config.bg }}
-                >
+          <span className="flex items-start justify-between gap-3">
+            <span className="min-w-0 flex-1">
+              <span className="mb-2 flex flex-wrap items-center gap-2">
+                <span className="ui-chip" style={{ color: config.color }}>
                   {config.label}
                 </span>
-                <span className="flex items-center gap-1 text-xs text-[#94a3b8]">
-                  <Clock size={11} />
+                <span className="flex items-center gap-1 text-xs text-[var(--ui-faint)]">
+                  <Clock size={11} aria-hidden="true" />
                   {step.duration}
                 </span>
-              </div>
-              <h4 className="font-semibold text-[#1a2e5a] text-sm">{step.title}</h4>
-              <p className="text-xs text-[#64748b] mt-0.5 leading-snug">{step.description}</p>
-            </div>
-            <div className="flex-shrink-0 text-[#94a3b8] group-hover:text-[#1a2e5a] transition-colors">
-              {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </div>
-          </div>
+              </span>
+              <span id={titleId} className="block font-[family-name:var(--ui-serif)] text-xl leading-tight text-[var(--ui-text)] [overflow-wrap:anywhere] sm:text-2xl">{step.title}</span>
+              <span className={`mt-2 text-xs leading-relaxed text-[var(--ui-muted)] ${expanded ? 'block' : 'line-clamp-2 sm:line-clamp-none'}`}>{step.description}</span>
+            </span>
+            <span className="mt-1 shrink-0 text-[var(--ui-faint)] transition-colors group-hover:text-[var(--ui-accent)]" aria-hidden="true">
+              {expanded ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
+            </span>
+          </span>
+        </button>
 
-          {/* Expanded content */}
+        <div id={detailsId} hidden={!expanded}>
           {expanded && (
-            <div className="mt-4 pt-4 border-t border-[#f1f5f9] space-y-3">
+            <div className="mx-4 space-y-4 border-t border-[var(--ui-border)] py-4 sm:mx-5 sm:pb-5">
               {step.skills_gained.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-[#475569] mb-1.5">Skills gained</p>
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--ui-muted)]">Skills gained</p>
                   <div className="flex flex-wrap gap-1.5">
                     {step.skills_gained.map((skill) => (
-                      <span
-                        key={skill}
-                        className="text-[11px] px-2 py-0.5 bg-[#f0f4ff] text-[#1a2e5a] border border-[#c5d9f0] rounded-full font-medium"
-                      >
+                      <span key={skill} className="ui-chip bg-[var(--ui-surface-2)]">
                         {skill}
                       </span>
                     ))}
@@ -112,14 +87,14 @@ function StepNode({ step, isLast, isActive = false }: StepNodeProps) {
 
               {step.certifications && step.certifications.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-[#475569] mb-1.5">Certifications</p>
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--ui-muted)]">Certifications</p>
                   <div className="flex flex-wrap gap-1.5">
                     {step.certifications.map((cert) => (
                       <span
                         key={cert}
-                        className="flex items-center gap-1 text-[11px] px-2 py-0.5 bg-[#fffbeb] text-[#d97706] border border-[#fef3c7] rounded-full font-medium"
+                        className="ui-chip"
                       >
-                        <Award size={10} />
+                        <Award size={11} className="shrink-0 text-[var(--ui-faint)]" aria-hidden="true" />
                         {cert}
                       </span>
                     ))}
@@ -129,14 +104,14 @@ function StepNode({ step, isLast, isActive = false }: StepNodeProps) {
 
               {step.possible_roles && step.possible_roles.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-[#475569] mb-1.5">Possible roles</p>
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--ui-muted)]">Possible roles</p>
                   <div className="flex flex-wrap gap-1.5">
                     {step.possible_roles.map((role) => (
                       <span
                         key={role}
-                        className="flex items-center gap-1 text-[11px] px-2 py-0.5 bg-[#ecfdf5] text-[#059669] border border-[#d1fae5] rounded-full font-medium"
+                        className="ui-chip"
                       >
-                        <Briefcase size={10} />
+                        <Briefcase size={11} className="shrink-0 text-[var(--ui-success)]" aria-hidden="true" />
                         {role}
                       </span>
                     ))}
@@ -145,32 +120,32 @@ function StepNode({ step, isLast, isActive = false }: StepNodeProps) {
               )}
 
               {step.next_step_hint && (
-                <div className="flex items-start gap-2 p-3 bg-[#f0f4ff] rounded-lg">
-                  <CheckCircle2 size={14} className="text-[#0ea5e9] flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-[#1a2e5a] leading-snug">
-                    <span className="font-semibold">Next: </span>
+                <div className="ui-alert flex items-start gap-2">
+                  <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-[var(--ui-success)]" aria-hidden="true" />
+                  <p className="ui-note">
+                    <span className="font-medium text-[var(--ui-text)]">Next: </span>
                     {step.next_step_hint}
                   </p>
                 </div>
               )}
             </div>
           )}
-        </button>
+        </div>
       </div>
-    </div>
+    </li>
   );
 }
 
 export function CareerTimeline({ steps, pathwayName }: CareerTimelineProps) {
   return (
-    <div>
+    <div className="min-w-0">
       {pathwayName && (
-        <p className="text-sm font-semibold text-[#475569] mb-4 flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#0ea5e9]" />
-          {pathwayName}
-        </p>
+        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="section-title">{pathwayName}</h2>
+          <p className="ui-note">Open a step to explore</p>
+        </div>
       )}
-      <div>
+      <ol>
         {steps.map((step, index) => (
           <StepNode
             key={step.id}
@@ -178,7 +153,7 @@ export function CareerTimeline({ steps, pathwayName }: CareerTimelineProps) {
             isLast={index === steps.length - 1}
           />
         ))}
-      </div>
+      </ol>
     </div>
   );
 }

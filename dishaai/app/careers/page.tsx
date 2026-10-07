@@ -1,11 +1,14 @@
 'use client';
-import { useMemo, useState, useEffect } from 'react';
-import { Search, Filter, SlidersHorizontal } from 'lucide-react';
+import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, ArrowRight, Search, Filter } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Button } from '@/components/ui/Button';
 import { CareerCard } from '@/components/career/CareerCard';
 import { generateRecommendations } from '@/lib/recommendation/engine';
-import { DEMO_CAREERS } from '@/data/careers';
-import type { RecommendationScore, OnboardingState } from '@/types';
+import { paginateCareers } from '@/lib/pagination';
+import type { OnboardingState } from '@/types';
 
 const DEMO_PROFILE: OnboardingState = {
   step: 5,
@@ -36,18 +39,26 @@ const CATEGORIES = [
   { value: 'agriculture', label: 'Agriculture' },
 ];
 
+function subscribeProfile(onChange: () => void) {
+  window.addEventListener('storage', onChange);
+  return () => window.removeEventListener('storage', onChange);
+}
+const readProfile = () => localStorage.getItem('disha_onboarding') ?? '';
+const serverProfile = () => null;
+
 export default function CareersPage() {
-  const [profile, setProfile] = useState<OnboardingState>(DEMO_PROFILE);
+  const savedProfile = useSyncExternalStore(subscribeProfile, readProfile, serverProfile);
+  const profile = useMemo<OnboardingState>(() => {
+    if (savedProfile) {
+      try { return JSON.parse(savedProfile); } catch { /* Keep the demo fallback. */ }
+    }
+    return DEMO_PROFILE;
+  }, [savedProfile]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [compareList, setCompareList] = useState<string[]>([]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('disha_onboarding');
-    if (saved) {
-      try { setProfile(JSON.parse(saved)); } catch {}
-    }
-  }, []);
+  const [page, setPage] = useState(1);
+  const resultsHeading = useRef<HTMLHeadingElement>(null);
 
   const studentProfile = useMemo(() => ({
     id: 'demo-001', user_id: 'demo-user',
@@ -84,6 +95,14 @@ export default function CareersPage() {
     return list;
   }, [recommendations, category, search]);
 
+  const { pageCount, currentPage, start, visible } = paginateCareers(filtered, page);
+
+  const changePage = (next: number) => {
+    setPage(Math.max(1, Math.min(next, pageCount)));
+    resultsHeading.current?.focus({ preventScroll: true });
+    resultsHeading.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+  };
+
   const toggleCompare = (id: string) => {
     setCompareList((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : prev.length < 3 ? [...prev, id] : prev,
@@ -91,81 +110,98 @@ export default function CareersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0f4ff] flex">
+    <div className="app-page">
       <Sidebar userName={profile.name ?? 'Student'} userRole="student" />
 
-      <main className="flex-1 ml-[240px] min-h-screen">
-        <div className="max-w-[1040px] mx-auto px-8 py-8">
-          {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-[#1a2e5a]">Career Recommendations</h1>
-            <p className="text-[#64748b] mt-1">
-              {recommendations.length} careers matched to your profile · Sorted by compatibility
-            </p>
-          </div>
+      <main className="app-main">
+        <div className="app-content">
+          <PageHeader
+            chapter="02"
+            eyebrow="Career matches"
+            title={<>Possibilities, <em>picked for you.</em></>}
+            description={`${recommendations.length} careers matched to your profile. Explore what fits, then compare the paths that spark your interest.`}
+            actions={<span className="ui-chip">Demo · Illustrative data</span>}
+          />
 
           {/* Filters */}
-          <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
-              <input
-                type="text"
-                placeholder="Search careers..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-[#e2e8f0] rounded-xl text-sm text-[#1a2e5a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#0ea5e9] bg-white"
-              />
+          <section aria-label="Filter career matches" className="paper-panel mb-4 p-4">
+            <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,240px)]">
+              <div className="min-w-0">
+                <label htmlFor="career-search" className="eyebrow mb-2 flex items-center gap-1.5 text-[var(--ui-muted)]">
+                  <Search size={12} aria-hidden="true" /> Find a possibility
+                </label>
+                <input
+                  id="career-search"
+                  type="search"
+                  placeholder="Search careers…"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  className="app-input w-full"
+                />
+              </div>
+              <div className="min-w-0">
+                <label htmlFor="career-category" className="eyebrow mb-2 flex items-center gap-1.5 text-[var(--ui-muted)]">
+                  <Filter size={12} aria-hidden="true" /> Field of work
+                </label>
+                <select
+                  id="career-category"
+                  value={category}
+                  onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+                  className="app-input w-full"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Filter size={14} className="text-[#94a3b8]" />
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="px-3 py-2 border border-[#e2e8f0] rounded-xl text-sm text-[#1a2e5a] focus:outline-none focus:border-[#0ea5e9] bg-white"
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </select>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--ui-border)] pt-3">
+              <p className="text-xs text-[var(--ui-muted)]" aria-live="polite">{filtered.length ? `Showing ${start + 1}–${start + visible.length} of ${filtered.length} matches` : 'No matching careers'}</p>
+              <span className="ui-note">Sorted by compatibility</span>
             </div>
-            <span className="text-xs text-[#d97706] bg-[#fffbeb] border border-[#fef3c7] px-2.5 py-1.5 rounded-full font-medium">
-              Demo · Illustrative Data
-            </span>
-          </div>
+          </section>
 
           {/* Compare bar */}
           {compareList.length > 0 && (
-            <div className="bg-[#1a2e5a] text-white rounded-2xl p-4 mb-6 flex items-center justify-between">
+            <section aria-label="Selected careers for comparison" className="dark-panel mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
               <div>
-                <p className="font-semibold text-sm">
+                <p className="section-title text-2xl text-[var(--ui-text)]" aria-live="polite">
                   Comparing {compareList.length} career{compareList.length > 1 ? 's' : ''}
                 </p>
-                <p className="text-xs text-[#8aaee0] mt-0.5">
+                <p className="mt-1 text-xs text-[var(--ui-muted)]">
                   Select up to 3 careers to compare side by side
                 </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {compareList.map((id) => <span key={id} className="ui-chip">{recommendations.find((rec) => rec.career_id === id)?.career.name ?? id}</span>)}
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setCompareList([])}
-                  className="text-xs text-[#8aaee0] hover:text-white transition-colors"
                 >
                   Clear
-                </button>
+                </Button>
                 {compareList.length >= 2 && (
-                  <a
+                  <Link
                     href={`/career-path/${compareList[0]}?compare=${compareList.slice(1).join(',')}`}
-                    className="px-4 py-2 bg-[#0ea5e9] rounded-xl text-sm font-semibold hover:bg-[#0284c7] transition-colors"
+                    className="inline-flex items-center gap-2 rounded-sm border border-[var(--ui-accent)] px-4 py-2 text-sm text-[var(--ui-text)] transition-colors hover:bg-[var(--ui-surface-2)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ui-accent)]"
                   >
-                    Compare Now →
-                  </a>
+                    Compare now <ArrowRight size={14} />
+                  </Link>
                 )}
               </div>
-            </div>
+            </section>
           )}
 
           {/* Career grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {filtered.map((rec) => (
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3 border-b border-[var(--ui-border)] pb-3">
+            <h2 ref={resultsHeading} tabIndex={-1} className="section-title scroll-mt-24 text-2xl text-[var(--ui-text)] sm:scroll-mt-20 lg:scroll-mt-4">Your shortlist of possibilities</h2>
+            <span className="eyebrow mb-0 text-[var(--ui-faint)]">Explore. Compare. Decide.</span>
+          </div>
+          <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {visible.map((rec) => (
               <CareerCard
                 key={rec.career_id}
                 recommendation={rec}
@@ -176,16 +212,28 @@ export default function CareersPage() {
             ))}
           </div>
 
+          {pageCount > 1 && (
+            <nav aria-label="Career results pages" className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ui-border)] pt-3">
+              <p className="text-xs text-[var(--ui-muted)]" aria-live="polite">Page {currentPage} of {pageCount}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => changePage(currentPage - 1)} icon={<ArrowLeft size={13} aria-hidden="true" />}>Previous</Button>
+                <Button variant="outline" size="sm" disabled={currentPage === pageCount} onClick={() => changePage(currentPage + 1)} icon={<ArrowRight size={13} aria-hidden="true" />} iconPosition="right">Next</Button>
+              </div>
+            </nav>
+          )}
+
           {filtered.length === 0 && (
-            <div className="text-center py-16">
-              <Search size={40} className="text-[#e2e8f0] mx-auto mb-4" />
-              <p className="text-[#64748b] font-medium">No careers found matching your filters.</p>
-              <button
-                onClick={() => { setSearch(''); setCategory(''); }}
-                className="mt-3 text-sm text-[#0284c7] hover:text-[#0369a1]"
+            <div className="paper-panel px-5 py-8 text-center">
+              <Search size={26} className="mx-auto mb-4 text-[var(--ui-faint)]" aria-hidden="true" />
+              <h3 className="section-title text-3xl text-[var(--ui-text)]">A different search might open a door.</h3>
+              <p className="mb-5 mt-2 text-sm text-[var(--ui-muted)]">No careers found matching your filters.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setSearch(''); setCategory(''); setPage(1); }}
               >
                 Clear filters
-              </button>
+              </Button>
             </div>
           )}
         </div>

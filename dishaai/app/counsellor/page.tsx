@@ -1,16 +1,20 @@
 'use client';
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import type { KeyboardEvent } from 'react';
+import Link from 'next/link';
 import {
-  BrainCircuit, Send, RotateCcw, ChevronRight, User, Zap,
-  AlertTriangle, Info, Sparkles, MessageCircle
+  ArrowUp, ArrowDown, ArrowUpRight, BookOpen, Check, ChevronDown,
+  Compass, Copy, Lightbulb, Plus, Sparkles, Square, UserRound, X,
 } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { Button } from '@/components/ui/Button';
+import { MessageContent } from '@/components/counsellor/MessageContent';
 import { LanguageSelector } from '@/components/gov/LanguageSelector';
 import { DEMO_CAREERS } from '@/data/careers';
 import { generateRecommendations } from '@/lib/recommendation/engine';
 import { cn } from '@/lib/utils';
+import { chatViewport } from '@/lib/chat-viewport';
 import type { OnboardingState } from '@/types';
+import styles from './counsellor.module.css';
 
 const DEMO_PROFILE: OnboardingState = {
   step: 5, name: 'Ravi Sharma', education_level: 'class_10',
@@ -28,34 +32,49 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   provider?: string;
+  error?: boolean;
   timestamp: Date;
 }
 
-const STARTER_QUESTIONS = [
-  'What exactly does a Solar PV Technician do day-to-day?',
-  'What skill gaps do I need to fill?',
-  'How can I get into an ITI near my area?',
-  'What is the job market like for this career?',
-  'Can I start my own business after training?',
-  'How long will it take to complete training?',
-];
+function subscribePreferences(onChange: () => void) {
+  window.addEventListener('storage', onChange);
+  window.addEventListener('disha-language-change', onChange);
+  return () => {
+    window.removeEventListener('storage', onChange);
+    window.removeEventListener('disha-language-change', onChange);
+  };
+}
+
+const readSavedProfile = () => localStorage.getItem('disha_onboarding');
+const serverProfile = () => null;
+const readLanguage = () => localStorage.getItem('disha_language_pref') || 'en';
+const serverLanguage = () => 'en';
 
 export default function CounsellorPage() {
-  const [profile, setProfile] = useState<OnboardingState>(DEMO_PROFILE);
+  const savedProfile = useSyncExternalStore(subscribePreferences, readSavedProfile, serverProfile);
+  const selectedLanguage = useSyncExternalStore(subscribePreferences, readLanguage, serverLanguage);
+  const profile = useMemo<OnboardingState>(() => {
+    if (savedProfile) {
+      try { return JSON.parse(savedProfile); } catch { /* Fall back to the demo profile. */ }
+    }
+    return DEMO_PROFILE;
+  }, [savedProfile]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
-  const [sessionId] = useState(() => `session-${Date.now()}`);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [contextOpen, setContextOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('disha_onboarding');
-    if (saved) { try { setProfile(JSON.parse(saved)); } catch {} }
-    const savedLang = localStorage.getItem('disha_language_pref');
-    if (savedLang) setSelectedLanguage(savedLang);
-  }, []);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const contextRef = useRef<HTMLDivElement>(null);
+  const contextToggleRef = useRef<HTMLButtonElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const followReplyRef = useRef(true);
+  const contextId = useId();
 
   const studentProfile = useMemo(() => ({
     id: 'demo-001', user_id: 'demo-user',
@@ -83,17 +102,103 @@ export default function CounsellorPage() {
     return recs[0]?.skill_gaps ?? [];
   }, [studentProfile, profile.selected_skills, topCareer]);
 
+  const hasConversation = messages.length > 0;
+  const starters = [
+    { label: 'Explore my career', hint: 'What the work is really like', icon: Compass, question: `What does a ${topCareer.name} do day-to-day?` },
+    { label: 'Build my skills', hint: 'Find a good place to start', icon: Lightbulb, question: 'What skill gaps do I need to fill, and how should I start?' },
+    { label: 'Find training', hint: 'Courses, eligibility & routes', icon: BookOpen, question: 'How can I get into an ITI near my area, and how long will training take?' },
+    { label: 'Plan my next step', hint: 'Turn possibilities into a plan', icon: ArrowUpRight, question: `What are three practical next steps I can take toward becoming a ${topCareer.name}?` },
+  ];
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const chat = scrollRef.current;
+    if (!chat) return;
+    if (messages.length === 0 && !loading) {
+      chat.scrollTo({ top: 0, behavior: 'instant' });
+      return;
+    }
+    if (followReplyRef.current) {
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      chat.scrollTo({ top: chat.scrollHeight, behavior: reducedMotion ? 'instant' : 'smooth' });
+    }
+  }, [messages, loading]);
+
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
+  }, [input]);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const touch = window.matchMedia('(pointer: coarse)');
+    let referenceHeight = window.innerHeight;
+    let lastWidth = window.innerWidth;
+    let frame = 0;
+
+    const update = () => {
+      const page = pageRef.current;
+      if (!page) return;
+      const focused = document.activeElement === inputRef.current;
+      if (!focused || lastWidth !== window.innerWidth) {
+        referenceHeight = window.innerHeight;
+        lastWidth = window.innerWidth;
+      }
+      const state = chatViewport({
+        layoutHeight: window.innerHeight, visualHeight: viewport.height,
+        referenceHeight, scale: viewport.scale, touch: touch.matches, focused,
+      });
+      if (state.height !== null) page.style.setProperty('--chat-viewport-height', `${state.height}px`);
+      page.dataset.keyboardOpen = String(state.keyboardOpen);
+    };
+    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(update); };
+    viewport.addEventListener('resize', schedule);
+    viewport.addEventListener('scroll', schedule);
+    window.addEventListener('resize', schedule);
+    document.addEventListener('focusin', schedule);
+    document.addEventListener('focusout', schedule);
+    touch.addEventListener('change', schedule);
+    update();
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport.removeEventListener('resize', schedule);
+      viewport.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+      document.removeEventListener('focusin', schedule);
+      document.removeEventListener('focusout', schedule);
+      touch.removeEventListener('change', schedule);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!contextOpen) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!contextRef.current?.contains(event.target as Node)) setContextOpen(false);
+    };
+    document.addEventListener('pointerdown', dismiss);
+    return () => document.removeEventListener('pointerdown', dismiss);
+  }, [contextOpen]);
+
+  useEffect(() => () => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+  }, []);
 
   const sendMessage = async (text?: string) => {
-    const question = text ?? input.trim();
-    if (!question || loading) return;
+    const question = (text ?? input).trim();
+    if (!question || requestRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    followReplyRef.current = true;
+    setShowScrollButton(false);
+    setNotice('');
     setInput('');
 
     const userMsg: Message = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       role: 'user',
       content: question,
       timestamp: new Date(),
@@ -109,6 +214,7 @@ export default function CounsellorPage() {
 
       const res = await fetch('/api/ai/counsel', {
         method: 'POST',
+        signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question,
@@ -128,258 +234,234 @@ export default function CounsellorPage() {
       });
 
       const data = await res.json();
-      const answer = data.answer ?? "I'm sorry, I couldn't get an answer right now. Please try again.";
+      if (controller.signal.aborted || requestRef.current !== controller) return;
+      const answer = !res.ok
+        ? 'That question couldn’t be answered. Try another career question or try again in a moment.'
+        : typeof data.answer === 'string' && data.answer.trim()
+          ? data.answer
+          : "I'm sorry, I couldn't get an answer right now. Please try again.";
 
       setMessages((prev) => [
         ...prev,
         {
-          id: (Date.now() + 1).toString(),
+          id: crypto.randomUUID(),
           role: 'assistant',
           content: answer,
-          provider: data.provider,
+          provider: res.ok && typeof data.provider === 'string' ? data.provider : undefined,
+          error: !res.ok,
           timestamp: new Date(),
         },
       ]);
     } catch {
+      if (controller.signal.aborted || requestRef.current !== controller) return;
       setMessages((prev) => [
         ...prev,
         {
-          id: (Date.now() + 1).toString(),
+          id: crypto.randomUUID(),
           role: 'assistant',
           content: "I'm unable to connect right now. Please check your internet connection and try again.",
+          error: true,
           timestamp: new Date(),
         },
       ]);
     } finally {
-      setLoading(false);
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+        setLoading(false);
+      }
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
-      sendMessage();
+      void sendMessage();
     }
   };
 
-  const clearChat = () => setMessages([]);
+  const stopReply = () => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setLoading(false);
+    setNotice('Reply stopped. You can send another question.');
+  };
+
+  const clearChat = () => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setLoading(false);
+    setMessages([]);
+    setInput('');
+    setNotice('');
+    setContextOpen(false);
+    setCopiedId(null);
+    setShowScrollButton(false);
+    followReplyRef.current = true;
+    inputRef.current?.focus({ preventScroll: true });
+  };
+
+  const copyReply = async (message: Message) => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopiedId(message.id);
+      setNotice('Reply copied.');
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setNotice('Copy isn’t available in this browser. You can select the reply text instead.');
+    }
+  };
+
+  const scrollToLatest = () => {
+    followReplyRef.current = true;
+    setShowScrollButton(false);
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'instant' });
+  };
 
   return (
-    <div className="min-h-screen bg-[#f0f4ff] flex">
+    <div ref={pageRef} className={cn('app-page', styles.page)}>
       <Sidebar userName={profile.name ?? 'Student'} userRole="student" />
 
-      <main className="flex-1 ml-[240px] flex flex-col h-screen">
-        {/* Top bar */}
-        <div className="bg-white border-b border-[#e2e8f0] px-8 py-4 flex-shrink-0">
-          <div className="max-w-[900px] mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#1a2e5a] rounded-xl flex items-center justify-center">
-                <BrainCircuit size={20} className="text-[#0ea5e9]" />
-              </div>
-              <div>
-                <h1 className="font-bold text-[#1a2e5a] text-base">AI Career Counsellor</h1>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
-                  <p className="text-xs text-[#64748b]">
-                    Context: {topCareer.name} · Gemini + OpenRouter
-                  </p>
+      <main className={cn('app-main', styles.main)}>
+        <div className={cn('app-content', styles.content)}>
+          <header className={styles.topBar}>
+            <div className={styles.brand}>
+              <span className={styles.brandMark} aria-hidden="true">दि</span>
+              <h1 className={styles.title} aria-label="Disha career counsellor"><span className={styles.titleName}>Disha</span><span className={styles.titleHint}>Counsellor</span></h1>
+            </div>
+            <div className={styles.headerActions}>
+              <div ref={contextRef} className={styles.contextControl} onKeyDown={(event) => {
+                if (event.key === 'Escape' && contextOpen) {
+                  event.preventDefault();
+                  setContextOpen(false);
+                  contextToggleRef.current?.focus();
+                }
+              }}>
+                <button ref={contextToggleRef} type="button" className={styles.quietButton} onClick={() => setContextOpen((open) => !open)} aria-expanded={contextOpen} aria-controls={contextId} aria-label="Your profile context">
+                  <UserRound size={15} aria-hidden="true" /><span className={styles.contextLabel}>Your context</span><ChevronDown size={12} aria-hidden="true" />
+                </button>
+                <div id={contextId} hidden={!contextOpen} className={styles.contextPanel} role="region" aria-label="Profile used for this conversation">
+                  <div className={styles.contextHeading}>
+                    <h2>A starting point, not a label.</h2>
+                    <button type="button" className={styles.iconButton} aria-label="Close profile context" onClick={() => { setContextOpen(false); contextToggleRef.current?.focus(); }}><X size={16} aria-hidden="true" /></button>
+                  </div>
+                  <p className={styles.contextNote}>Disha uses your assessment to make guidance relevant to you.</p>
+                  <p className={styles.profileName}>{profile.name ?? 'Student'} <span>· {profile.education_level?.replace(/_/g, ' ')}</span></p>
+                  <Link href={`/careers/${topCareer.id}`} className={styles.careerContext}>{topCareer.name}<ArrowUpRight size={15} aria-hidden="true" /></Link>
+                  <h3>Your interests</h3>
+                  <div className={styles.contextChips}>{profile.selected_interests.map((interest) => <span key={interest}>{interest.replace(/_/g, ' ')}</span>)}</div>
+                  <h3>Skills you bring</h3>
+                  <div className={styles.contextChips}>{profile.selected_skills.map((skill) => <span key={skill.skill_id}>{skill.skill_name} · {skill.proficiency}/5</span>)}</div>
+                  {topSkillGaps.length > 0 && <><h3>Skills to build</h3><div className={styles.contextChips}>{topSkillGaps.map((gap) => <span key={gap.skill_id}>{gap.skill_name}</span>)}</div></>}
+                  <Link href="/onboarding" className={styles.updateProfile}>Update your assessment <ArrowUpRight size={13} aria-hidden="true" /></Link>
                 </div>
               </div>
+              <button type="button" className={styles.newChatButton} onClick={clearChat} disabled={!hasConversation && !input} aria-label="Start a new conversation">
+                <Plus size={16} aria-hidden="true" /><span>New chat</span>
+              </button>
             </div>
-            <div className="flex items-center gap-3">
-              <LanguageSelector
-                onLanguageChange={(code) => setSelectedLanguage(code)}
-              />
-              <span className="text-xs px-2.5 py-1.5 bg-[#fffbeb] border border-[#fef3c7] text-[#d97706] rounded-full font-medium hidden sm:inline">
-                MSDE & Bhashini Grounded
-              </span>
-              {messages.length > 0 && (
-                <Button variant="ghost" size="sm" icon={<RotateCcw size={14} />} onClick={clearChat}>
-                  Clear
-                </Button>
+          </header>
+
+          <section className={cn(styles.conversation, !hasConversation && styles.emptyConversation)} data-chat-state={hasConversation ? 'active' : 'empty'} aria-label="Career counselling chat">
+            <div className={styles.transcriptViewport}>
+            <div ref={scrollRef} className={styles.scrollArea} onScroll={(event) => {
+              const chat = event.currentTarget;
+              const nearBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 100;
+              followReplyRef.current = nearBottom;
+              setShowScrollButton(!nearBottom);
+            }}>
+              {/* Empty state */}
+              {messages.length === 0 && (
+                <div className={styles.welcome}>
+                  <span className={styles.welcomeMark} aria-hidden="true"><Sparkles size={25} strokeWidth={1.4} /></span>
+                  <p className={styles.welcomeEyebrow}>A path of your own</p>
+                  <h2>Let&apos;s find your <em>next chapter.</em></h2>
+                  <p className={styles.welcomeDescription}>A little guidance for the big decisions.<br />Ask a question. Explore a possibility. Take the next step.</p>
+                </div>
+              )}
+
+              {/* Messages */}
+              <div className={styles.messageList} role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions" aria-busy={loading}>
+                {messages.map((msg) => (
+                  <article
+                    key={msg.id}
+                    aria-label={msg.role === 'user' ? 'Your question' : 'Counsellor reply'}
+                    className={cn(styles.message, msg.role === 'user' ? styles.userMessage : styles.assistantMessage)}
+                    data-message-role={msg.role}
+                  >
+                    {msg.role === 'user' ? (
+                      <div className={styles.userBubble}><p>{msg.content}</p></div>
+                    ) : (
+                      <>
+                        <div className={styles.assistantIdentity}><span className={styles.replyMark} aria-hidden="true"><Sparkles size={16} /></span><span>Disha</span><span className={styles.identityHint}>Career counsellor</span></div>
+                        {msg.error ? <p className={styles.errorReply}>{msg.content}</p> : <MessageContent content={msg.content} className={styles.replyContent} />}
+                        <div className={styles.messageActions}>
+                          <button type="button" className={styles.copyButton} onClick={() => void copyReply(msg)} aria-label={copiedId === msg.id ? 'Reply copied' : 'Copy counsellor reply'}>
+                            {copiedId === msg.id ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}<span>{copiedId === msg.id ? 'Copied' : 'Copy'}</span>
+                          </button>
+                          {msg.provider && <span className={styles.provider}>via {msg.provider}</span>}
+                        </div>
+                      </>
+                    )}
+                  </article>
+                ))}
+              </div>
+
+              {/* Loading indicator */}
+              {loading && (
+                <div className={styles.thinking} aria-hidden="true">
+                  <span className={styles.thinkingMark}><Sparkles size={17} /></span>
+                  <span>Thinking through your next step<span className={styles.thinkingDots}>…</span></span>
+                </div>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Chat area */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[900px] mx-auto px-8 py-6">
-
-            {/* Empty state */}
-            {messages.length === 0 && (
-              <div>
-                <div className="text-center mb-10">
-                  <div className="w-16 h-16 bg-[#1a2e5a] rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Sparkles size={28} className="text-[#0ea5e9]" />
-                  </div>
-                  <h2 className="text-xl font-bold text-[#1a2e5a] mb-2">
-                    Ask me anything about your career
-                  </h2>
-                  <p className="text-[#64748b] text-sm max-w-md mx-auto">
-                    I'm your AI career counsellor. I know your profile and can help you understand your
-                    recommended career path, skill gaps, and next steps.
-                  </p>
-                </div>
-
-                {/* Context card */}
-                <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 mb-8">
-                  <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider mb-3">My Context</p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-2.5 py-1 bg-[#f0f4ff] text-[#1a2e5a] rounded-full text-xs font-medium border border-[#c5d9f0]">
-                      👤 {profile.name ?? 'Student'}
-                    </span>
-                    <span className="px-2.5 py-1 bg-[#e0f2fe] text-[#0284c7] rounded-full text-xs font-medium">
-                      🎯 {topCareer.name}
-                    </span>
-                    {profile.selected_interests.slice(0, 2).map((i) => (
-                      <span key={i} className="px-2.5 py-1 bg-[#f1f5f9] text-[#64748b] rounded-full text-xs font-medium">
-                        {i.replace('_', ' ')}
-                      </span>
-                    ))}
-                    {topSkillGaps.slice(0, 2).map((g) => (
-                      <span key={g.skill_name} className="px-2.5 py-1 bg-[#fffbeb] text-[#d97706] border border-[#fef3c7] rounded-full text-xs font-medium">
-                        Gap: {g.skill_name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Starter questions */}
-                <div>
-                  <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider mb-3">
-                    Try asking
-                  </p>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {STARTER_QUESTIONS.map((q) => (
-                      <button
-                        key={q}
-                        onClick={() => sendMessage(q)}
-                        className="text-left px-4 py-3 bg-white border border-[#e2e8f0] rounded-xl text-sm text-[#475569] hover:border-[#0ea5e9] hover:bg-[#f0f9ff] hover:text-[#0284c7] transition-all duration-150 flex items-center gap-2 group"
-                      >
-                        <ChevronRight size={13} className="text-[#94a3b8] group-hover:text-[#0ea5e9] flex-shrink-0" />
-                        {q}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Messages */}
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn(
-                  'mb-5 flex gap-3',
-                  msg.role === 'user' ? 'flex-row-reverse' : 'flex-row',
-                )}
-              >
-                {/* Avatar */}
-                <div
-                  className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
-                    msg.role === 'user' ? 'bg-[#1a2e5a]' : 'bg-[#f0f9ff] border border-[#bae6fd]',
-                  )}
-                >
-                  {msg.role === 'user' ? (
-                    <User size={16} className="text-white" />
-                  ) : (
-                    <BrainCircuit size={16} className="text-[#0284c7]" />
-                  )}
-                </div>
-
-                {/* Bubble */}
-                <div
-                  className={cn(
-                    'max-w-[70%] rounded-2xl px-4 py-3',
-                    msg.role === 'user'
-                      ? 'bg-[#1a2e5a] text-white rounded-tr-sm'
-                      : 'bg-white border border-[#e2e8f0] text-[#1a2e5a] rounded-tl-sm shadow-sm',
-                  )}
-                >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  <div className={cn(
-                    'flex items-center gap-2 mt-1.5',
-                    msg.role === 'user' ? 'justify-end' : 'justify-between',
-                  )}>
-                    <span className={cn(
-                      'text-[10px]',
-                      msg.role === 'user' ? 'text-[#8aaee0]' : 'text-[#94a3b8]',
-                    )}>
-                      {msg.timestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    {msg.provider && msg.role === 'assistant' && (
-                      <span className="text-[10px] text-[#94a3b8]">via {msg.provider}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Loading indicator */}
-            {loading && (
-              <div className="flex gap-3 mb-5">
-                <div className="w-8 h-8 rounded-full bg-[#f0f9ff] border border-[#bae6fd] flex items-center justify-center flex-shrink-0">
-                  <BrainCircuit size={16} className="text-[#0284c7]" />
-                </div>
-                <div className="bg-white border border-[#e2e8f0] rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-                  <div className="flex items-center gap-1.5">
-                    {[0, 1, 2].map((i) => (
-                      <div
-                        key={i}
-                        className="w-2 h-2 rounded-full bg-[#0ea5e9] animate-bounce"
-                        style={{ animationDelay: `${i * 150}ms` }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={bottomRef} />
-          </div>
-        </div>
-
-        {/* AI disclaimer */}
-        <div className="bg-[#fffbeb] border-t border-[#fef3c7] px-8 py-2 flex-shrink-0">
-          <div className="max-w-[900px] mx-auto flex items-center gap-2">
-            <AlertTriangle size={12} className="text-[#d97706] flex-shrink-0" />
-            <p className="text-[10px] text-[#92400e]">
-              AI answers are grounded in our career knowledge base only. Do not treat responses as official government or legal advice.
-            </p>
-          </div>
-        </div>
-
-        {/* Input bar */}
-        <div className="bg-white border-t border-[#e2e8f0] px-8 py-4 flex-shrink-0">
-          <div className="max-w-[900px] mx-auto flex gap-3">
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask anything about your career path..."
-                rows={1}
-                className="w-full px-4 py-3 pr-12 border border-[#e2e8f0] rounded-xl text-sm text-[#1a2e5a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/15 resize-none bg-white"
-                style={{ minHeight: '48px', maxHeight: '120px' }}
-              />
+            {showScrollButton && hasConversation && <button type="button" className={styles.scrollButton} onClick={scrollToLatest} aria-label="Scroll to latest reply"><ArrowDown size={17} aria-hidden="true" /></button>}
             </div>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => sendMessage()}
-              disabled={!input.trim() || loading}
-              loading={loading}
-              icon={<Send size={16} />}
-            >
-              Send
-            </Button>
-          </div>
-          <p className="text-center text-[10px] text-[#94a3b8] mt-2">
-            Press Enter to send · Shift+Enter for new line
-          </p>
+
+            <p role="status" aria-live="polite" className="sr-only">
+              {loading ? 'The counsellor is preparing your reply.' : notice}
+            </p>
+
+            <div className={styles.composerRegion}>
+              <form className={styles.composer} aria-label="Message the career counsellor" onSubmit={(event) => { event.preventDefault(); void sendMessage(); }}>
+                <label htmlFor="counsellor-question" className="sr-only">Your question</label>
+                <textarea
+                  ref={inputRef}
+                  id="counsellor-question"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={hasConversation ? 'Ask a follow-up…' : 'Ask Disha about your next step…'}
+                  rows={2}
+                  aria-describedby="counsellor-keyboard-hint counsellor-disclaimer"
+                  className={styles.textarea}
+                />
+                <div className={styles.composerToolbar}>
+                  <div className={styles.composerOptions}>
+                    <span className={styles.guidanceLabel}><Sparkles size={13} aria-hidden="true" />Career guidance</span>
+                    <LanguageSelector className={styles.language} />
+                  </div>
+                  {loading ? (
+                    <button type="button" className={styles.sendButton} onClick={stopReply} aria-label="Stop waiting for reply" title="Stop reply"><Square size={15} fill="currentColor" aria-hidden="true" /></button>
+                  ) : (
+                    <button type="submit" className={styles.sendButton} disabled={!input.trim()} aria-label="Send message" title="Send message"><ArrowUp size={19} strokeWidth={2.3} aria-hidden="true" /></button>
+                  )}
+                </div>
+              </form>
+              <p id="counsellor-keyboard-hint" className="sr-only">Press Enter to send. Shift+Enter adds a new line.</p>
+              {!hasConversation && (
+                <div className={styles.starters} aria-label="Suggested questions">
+                  {starters.map(({ label, hint, icon: Icon, question }) => (
+                    <button key={label} type="button" data-chat-starter className={styles.starter} onClick={() => void sendMessage(question)} disabled={loading} aria-label={question}>
+                      <span className={styles.starterLabel}><Icon size={15} aria-hidden="true" />{label}</span><span className={styles.starterHint}>{hint}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {notice && notice !== 'Reply copied.' && <p className={styles.notice}>{notice}</p>}
+              <p id="counsellor-disclaimer" className={styles.disclaimer}>Disha can make mistakes. Verify important details with a counsellor or training institute.<span> Demo guidance · Not official advice.</span></p>
+            </div>
+          </section>
         </div>
       </main>
     </div>

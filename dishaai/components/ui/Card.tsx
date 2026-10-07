@@ -13,8 +13,8 @@ interface CardProps {
 const paddingClasses = {
   none: '',
   sm: 'p-4',
-  md: 'p-5',
-  lg: 'p-6',
+  md: 'p-4',
+  lg: 'p-5',
 };
 
 export function Card({ children, className, hover = false, padding = 'md', onClick }: CardProps) {
@@ -22,8 +22,8 @@ export function Card({ children, className, hover = false, padding = 'md', onCli
     <div
       onClick={onClick}
       className={cn(
-        'disha-card bg-white border border-[#e2e8f0] rounded-2xl shadow-sm',
-        hover && 'transition-all duration-200 hover:shadow-[0_12px_28px_rgba(26,46,90,0.12)] hover:border-[#c5d9f0] hover:-translate-y-0.5 cursor-pointer',
+        'disha-card bg-[var(--ui-surface,#15110e)] border border-[var(--ui-border,rgba(246,239,229,0.14))] text-[var(--ui-text,#f6efe5)] rounded-md shadow-sm',
+        hover && 'disha-card--hover transition-all duration-200 hover:shadow-[0_12px_28px_rgba(0,0,0,0.5)] hover:border-[var(--ui-accent,#e69b53)] hover:-translate-y-0.5 cursor-pointer',
         paddingClasses[padding],
         className,
       )}
@@ -45,13 +45,13 @@ export function CardHeader({ title, subtitle, action, icon }: CardHeaderProps) {
     <div className="flex items-start justify-between mb-4">
       <div className="flex items-center gap-3">
         {icon && (
-          <div className="w-9 h-9 bg-[#f0f4ff] rounded-xl flex items-center justify-center text-[#1a2e5a]">
+          <div className="ui-icon w-9 h-9 bg-[var(--ui-surface-2,#1c1712)] rounded flex items-center justify-center text-[var(--ui-accent,#e69b53)]">
             {icon}
           </div>
         )}
         <div>
-          <h3 className="font-semibold text-[#1a2e5a] text-base leading-tight">{title}</h3>
-          {subtitle && <p className="text-[#64748b] text-sm mt-0.5">{subtitle}</p>}
+          <h3 className="section-title text-[var(--ui-text,#f6efe5)] text-base leading-tight">{title}</h3>
+          {subtitle && <p className="text-[var(--ui-muted,#b2a69a)] text-sm mt-0.5">{subtitle}</p>}
         </div>
       </div>
       {action && <div className="flex-shrink-0">{action}</div>}

@@ -5,6 +5,7 @@ interface ProgressProps {
   value: number;
   max?: number;
   label?: string;
+  ariaLabel?: string;
   sublabel?: string;
   showValue?: boolean;
   size?: 'sm' | 'md' | 'lg';
@@ -16,23 +17,24 @@ interface ProgressProps {
 const sizeClasses = { sm: 'h-1.5', md: 'h-2', lg: 'h-3' };
 
 const colorClasses = {
-  primary: 'bg-gradient-to-r from-[#1a2e5a] to-[#0ea5e9]',
-  success: 'bg-gradient-to-r from-[#10b981] to-[#34d399]',
-  warning: 'bg-gradient-to-r from-[#f59e0b] to-[#fbbf24]',
+  primary: 'bg-gradient-to-r from-[#b5712a] to-[#e69b53]',
+  success: 'bg-gradient-to-r from-[#5a8052] to-[#78a36d]',
+  warning: 'bg-gradient-to-r from-[#c9803a] to-[#e69b53]',
 };
 
-function getAutoColor(value: number): string {
+function getAutoTone(value: number): 'success' | 'warning' | 'error' {
   return value >= 75
-    ? colorClasses.success
-    : value >= 50
-    ? colorClasses.warning
-    : 'bg-gradient-to-r from-[#e11d48] to-[#f43f5e]';
+    ? 'success'
+    : value >= 55
+    ? 'warning'
+    : 'error';
 }
 
 export function Progress({
   value,
   max = 100,
   label,
+  ariaLabel,
   sublabel,
   showValue = false,
   size = 'md',
@@ -40,15 +42,18 @@ export function Progress({
   className,
   animated = false,
 }: ProgressProps) {
-  const pct = Math.min(100, Math.max(0, (value / max) * 100));
-  const fillClass = color === 'auto' ? getAutoColor(pct) : colorClasses[color];
+  const safeMax = Number.isFinite(max) && max > 0 ? max : 100;
+  const boundedValue = Number.isFinite(value) ? Math.min(safeMax, Math.max(0, value)) : 0;
+  const pct = (boundedValue / safeMax) * 100;
+  const tone = color === 'auto' ? getAutoTone(pct) : color;
+  const fillClass = tone === 'error' ? 'bg-gradient-to-r from-[#c9583f] to-[#e06d53]' : colorClasses[tone];
 
   return (
     <div className={cn('w-full', className)}>
       {(label || showValue) && (
-        <div className="flex items-center justify-between mb-1.5">
-          {label && <span className="text-sm font-medium text-[#1a2e5a]">{label}</span>}
-          {sublabel && <span className="text-xs text-[#94a3b8]">{sublabel}</span>}
+        <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          {label && <span className="text-sm font-medium text-[var(--ui-text,#f6efe5)]">{label}</span>}
+          {sublabel && <span className="text-xs text-[var(--ui-faint,#8a7e72)]">{sublabel}</span>}
           {showValue && (
             <span
               className="text-sm font-bold"
@@ -61,21 +66,25 @@ export function Progress({
       )}
       <div
         className={cn(
-          'w-full bg-[#e2e8f0] rounded-full overflow-hidden',
+          'w-full bg-[var(--ui-surface-2,#1c1712)] rounded-full overflow-hidden border border-[var(--ui-border,rgba(246,239,229,0.14))]',
           sizeClasses[size],
         )}
       >
         <div
+          data-tone={tone}
           className={cn(
+            'disha-progress-fill',
             'h-full rounded-full',
             fillClass,
             animated && 'transition-all duration-700 ease-out',
           )}
           style={{ width: `${pct}%` }}
           role="progressbar"
-          aria-valuenow={value}
+          aria-label={ariaLabel ?? label ?? 'Progress'}
+          aria-valuenow={boundedValue}
+          aria-valuetext={`${Math.round(pct)}%`}
           aria-valuemin={0}
-          aria-valuemax={max}
+          aria-valuemax={safeMax}
         />
       </div>
     </div>
@@ -112,7 +121,7 @@ export function ScoreRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#e2e8f0"
+          stroke="var(--ui-border, #e2e8f0)"
           strokeWidth={strokeWidth}
         />
         <circle
@@ -130,7 +139,7 @@ export function ScoreRing({
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-lg font-bold" style={{ color }}>{score}%</span>
-        {label && <span className="text-[10px] text-[#94a3b8] leading-tight text-center">{label}</span>}
+        {label && <span className="text-[10px] text-[var(--ui-faint,#94a3b8)] leading-tight text-center">{label}</span>}
       </div>
     </div>
   );

@@ -31,10 +31,12 @@ should not treat a fallback as verified factual advice.
 Add these only when the corresponding adapters are implemented; the current
 repository does not read them:
 
-- [ ] `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — Clerk browser publishable key.
-- [ ] `CLERK_SECRET_KEY` — Clerk server key; never expose to the browser.
-- [ ] `CLERK_WEBHOOK_SIGNING_SECRET` — optional server-only secret if profile
-  synchronization uses a Clerk webhook.
+- [ ] `NEXT_PUBLIC_FIREBASE_API_KEY` — Firebase Web API key.
+- [ ] `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` — Firebase Auth domain.
+- [ ] `NEXT_PUBLIC_FIREBASE_PROJECT_ID` — Firebase Project ID.
+- [ ] `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` — Firebase Storage bucket.
+- [ ] `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` — Firebase Messaging sender ID.
+- [ ] `NEXT_PUBLIC_FIREBASE_APP_ID` — Firebase App ID.
 - [ ] `DATABASE_URL` — pooled runtime PostgreSQL connection string.
 - [ ] `DIRECT_DATABASE_URL` — direct/migration connection string, kept out of
   request handlers where possible.
@@ -44,22 +46,12 @@ vendor's names in Vercel and update the database adapter explicitly. The
 existing commented Supabase variables in `.env.example` are not proof that a
 Supabase project is connected.
 
-## 2. Clerk configuration (planned integration)
+## 2. Firebase configuration
 
-1. Create a Clerk application for each environment and configure production and
-   preview origins/redirects.
-2. Add the Clerk Next.js SDK, middleware, and server-side identity checks before
-   describing a route as authenticated.
-3. On a verified request, map the immutable Clerk subject to
-   `profiles.auth_user_id`. Do not use an email address as the ownership key.
-4. If using database RLS through a gateway, set the trusted subject claim for
-   the transaction only after Clerk verification. The schema accepts
-   `request.jwt.claim.sub` or the trusted `app.auth_user_id` setting.
-5. Keep admin role assignment server-controlled. Do not accept `role: admin`
-   from a browser payload.
-
-Until these steps are complete, onboarding is local demo state and the current
-AI routes are not protected by Clerk.
+1. Create a Firebase project in the Firebase Console (https://console.firebase.google.com/).
+2. Enable Authentication (Email/Password and Google OAuth).
+3. Copy the web app configuration parameters to `.env.local` or Vercel Environment Variables.
+4. On a verified request, map the immutable Firebase UID (`user.uid`) to `profiles.auth_user_id`.
 
 ## 3. PostgreSQL and pgvector setup
 
@@ -107,7 +99,7 @@ migration history once production data exists.
 
 ## 5. Security constraints before production
 
-- Keep `CLERK_SECRET_KEY`, `DATABASE_URL`, `DIRECT_DATABASE_URL`,
+- Keep `DATABASE_URL`, `DIRECT_DATABASE_URL`,
   `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, and service-role credentials server
   side only.
 - Do not grant a browser client a PostgreSQL owner/service-role connection.
@@ -146,7 +138,7 @@ curl -fsS "$NEXT_PUBLIC_APP_URL/api/health" >/dev/null
 
 Also inspect Vercel function logs for provider initialization errors without
 printing secret values. `/api/health` reports configuration presence only; it
-does not prove that a provider, database, Clerk session, or vector index is
+does not prove that a provider, database, Firebase session, or vector index is
 reachable. Once those adapters are wired, add checks for an authenticated
 session, a profile read, a safe AI request, and database/vector connectivity.
 A successful page response alone does not prove those integrations are connected.

@@ -658,6 +658,22 @@ window.__kbBoot = 'self.window = self; self.onmessage = e => { const d = e.data 
     #foot .base span:nth-child(2){margin-left:auto}
     #foot .base span:last-child{width:100%}
   }
+  @media (max-height:500px) and (max-width:1000px) and (hover:none){
+    .bar{height:52px;padding:0 20px;gap:16px}
+    .bar .nav{display:none}
+    .chapter,.chapter.right{justify-content:center;padding-top:56px;padding-bottom:68px}
+    .big{font-size:clamp(38px,8vw,68px)}
+    .big.long,.big.long.mid{font-size:clamp(36px,7vw,62px)}
+    .big em{font-size:24px}
+    .lede{max-width:min(24em,86vw);font-size:15px;margin-top:8px}
+    .meta{margin-top:10px;gap:12px;flex-wrap:wrap}
+    .meta b{font-size:12px}
+    .lockup{padding:6vh 8vw}
+    .lk-word{font-size:clamp(40px,8vw,68px)}
+    .lk-line{font-size:15px;max-width:min(440px,82vw);white-space:normal}
+    .index,.vol{bottom:12px}
+    #foot .wrap{padding-block:36px}
+  }
   @media (prefers-reduced-motion:reduce){
     #foot input,#foot button{transition:none}
   }

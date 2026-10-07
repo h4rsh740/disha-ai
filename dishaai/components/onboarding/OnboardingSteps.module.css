@@ -589,8 +589,14 @@
 
   .radioCard,
   .interestCard {
-    padding: 12px;
+    padding: 10px;
   }
+
+  .radioCard { min-height: 82px; gap: 5px; }
+  .interestCard { min-height: 124px; gap: 5px; }
+  .optionTitle { font-size: 13px; }
+  .optionDescription { font-size: 11px; line-height: 1.5; }
+  .step { gap: 22px; }
 
   .skillToggle {
     padding: 14px 12px;
@@ -609,6 +615,12 @@
     gap: 10px;
     padding: 16px;
   }
+}
+
+@container onboarding-form (max-width: 280px) {
+  .preferenceGrid { grid-template-columns: minmax(0, 1fr); }
+  .ratingButtons { display: grid; width: 100%; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
+  .ratingButton { width: 100%; min-width: 0; }
 }
 
 @media (hover: hover) {

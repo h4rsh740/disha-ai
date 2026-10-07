@@ -10,15 +10,15 @@ export function formatScore(score: number): string {
 }
 
 export function scoreColor(score: number): string {
-  if (score >= 75) return '#059669';
-  if (score >= 55) return '#d97706';
-  return '#e11d48';
+  if (score >= 75) return 'var(--ui-success, #059669)';
+  if (score >= 55) return 'var(--ui-accent, #d97706)';
+  return 'var(--ui-red, #e11d48)';
 }
 
 export function scoreBg(score: number): string {
-  if (score >= 75) return '#ecfdf5';
-  if (score >= 55) return '#fffbeb';
-  return '#fff1f2';
+  if (score >= 75) return 'var(--ui-surface-2, #ecfdf5)';
+  if (score >= 55) return 'var(--ui-surface-2, #fffbeb)';
+  return 'var(--ui-surface-2, #fff1f2)';
 }
 
 export function truncate(str: string, length: number): string {

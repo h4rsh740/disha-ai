@@ -1,33 +1,25 @@
 # DishaAI — Government of India Technology Architecture
-### Smart India Hackathon (SIH 2026) · Ministry of Skill Development & Entrepreneurship (MSDE)
+### Ministry of Skill Development & Entrepreneurship (MSDE) & Digital India
 
-This document outlines the complete Government-native technology stack implemented in Disha AI to satisfy MSDE, Digital India, and MeitY standards.
+This document outlines the architecture implemented in Disha AI to satisfy MSDE, Digital India, and Bhashini standards.
 
 ---
 
 ## 1. Government Stack Mapping
 
-| Layer | Traditional Stack | **Official Government of India (MeitY / MSDE) Stack** |
+| Layer | Implementation | Notes |
 | :--- | :--- | :--- |
-| **Identity & Authentication** | Clerk / Auth0 | **MeriPehchan (National Single Sign-On / Jan Parichay)** + **DigiLocker / APAAR ID** (Automated Permanent Academic Account Registry) |
-| **Multilingual AI & Translation** | Google Translate / Proprietary NLP | **Bhashini (Digital India Bhashini Division, MeitY)** — Neural Machine Translation across 22 Scheduled Indian Languages |
-| **Vocational Schemes & Data** | Static / Mock Scrapes | **Skill India Digital Hub (SIDH) / NSDC / DGT & API Setu (apisetu.gov.in)** |
-| **Skill Standards & Qualifications** | Unstructured Roles | **National Qualifications Register (NQR)** & **NSQF (National Skills Qualifications Framework)** Qualification Packs (QP/NOS) |
-| **AI Reasoning Engine** | Generic Unbounded LLM | **Grounded AI with Prompt-Injection Defense & MSDE Guardrails** |
+| **Identity & Authentication** | **Firebase Authentication** | Google OAuth & Email/Password login with secure client SDK |
+| **Multilingual AI & Translation** | **Bhashini (Digital India Bhashini Division, MeitY)** | Neural Machine Translation across 22 Scheduled Indian Languages |
+| **Vocational Schemes & Data** | **Skill India Digital Hub (SIDH) / NSDC / DGT & API Setu** | Official course listings, PMKVY, NAPS, and ITI trade data |
+| **Skill Standards & Qualifications** | **National Qualifications Register (NQR)** | NSQF (National Skills Qualifications Framework) qualification packs |
+| **AI Reasoning Engine** | **Google Gemini & OpenRouter** | Grounded AI with Prompt-Injection Defense & Guardrails |
 
 ---
 
 ## 2. Integrated Government Modules
 
-### A. MeriPehchan (Jan Parichay) & DigiLocker / APAAR ID
-- **Location:** [`lib/gov/meripehchan.ts`](file:///Users/harshsingh/Desktop/Disha%20AI/dishaai/lib/gov/meripehchan.ts) & [`app/api/gov/auth/route.ts`](file:///Users/harshsingh/Desktop/Disha%20AI/dishaai/app/api/gov/auth/route.ts)
-- **UI:** [`components/gov/MeriPehchanLogin.tsx`](file:///Users/harshsingh/Desktop/Disha%20AI/dishaai/components/gov/MeriPehchanLogin.tsx)
-- **Features:**
-  - Citizen single sign-on replacing commercial foreign auth providers.
-  - Verification of Academic Bank of Credits (APAAR ID) and CBSE/State Board roll numbers.
-  - Auto-populates student's verified profile data (education level, verified name, domicile state).
-
-### B. Bhashini (MeitY National Language Translation Mission)
+### A. Bhashini (MeitY National Language Translation Mission)
 - **Location:** [`lib/gov/bhashini.ts`](file:///Users/harshsingh/Desktop/Disha%20AI/dishaai/lib/gov/bhashini.ts) & [`app/api/gov/bhashini/route.ts`](file:///Users/harshsingh/Desktop/Disha%20AI/dishaai/app/api/gov/bhashini/route.ts)
 - **UI:** [`components/gov/LanguageSelector.tsx`](file:///Users/harshsingh/Desktop/Disha%20AI/dishaai/components/gov/LanguageSelector.tsx)
 - **Features:**
@@ -36,7 +28,7 @@ This document outlines the complete Government-native technology stack implement
     - Non-English student query is translated to English via Bhashini for grounded RAG matching against verified MSDE datasets.
     - AI answer is translated back into the student's mother tongue via Bhashini.
 
-### C. Skill India Digital Hub (SIDH) & MSDE Verified Schemes
+### B. Skill India Digital Hub (SIDH) & MSDE Verified Schemes
 - **Location:** [`lib/gov/skill-india.ts`](file:///Users/harshsingh/Desktop/Disha%20AI/dishaai/lib/gov/skill-india.ts) & [`app/api/gov/skills/route.ts`](file:///Users/harshsingh/Desktop/Disha%20AI/dishaai/app/api/gov/skills/route.ts)
 - **UI:** [`components/gov/GovSchemesCard.tsx`](file:///Users/harshsingh/Desktop/Disha%20AI/dishaai/components/gov/GovSchemesCard.tsx)
 - **Features:**
@@ -48,35 +40,35 @@ This document outlines the complete Government-native technology stack implement
 
 ---
 
-## 3. End-to-End Government Data Flow
+## 3. End-to-End Data Flow
 
 ```text
-Citizen / Student
+Student / Citizen
     │
     ▼
-[ MeriPehchan / APAAR NSSO Login ] (Citizen Identity Verification)
+[ Firebase Authentication ] (Google OAuth / Email-Password)
     │
     ▼
 [ Bhashini Language Switcher ] (User selects Hindi / Tamil / Marathi / etc.)
     │
     ▼
 [ AI Counsellor Query ] ──(Bhashini NMT)──> [ Grounded English Representation ]
-                                                    │
-                                                    ▼
-                                   [ Skill India Digital & MSDE RAG ]
-                                   (PMKVY, NAPS, NSQF, CTS Standards)
-                                                    │
-                                                    ▼
-                                          [ Cognitive LLM Engine ]
-                                                    │
-                                                    ▼
-                                          [ Security Guardrails ]
-                                                    │
-                                                    ▼
-                                   [ Bhashini NMT Return Translation ]
-                                                    │
-                                                    ▼
-                                    Student receives response in mother tongue
+                                                │
+                                                ▼
+                               [ Skill India Digital & MSDE Data ]
+                               (PMKVY, NAPS, NSQF, CTS Standards)
+                                                │
+                                                ▼
+                                      [ Cognitive LLM Engine ]
+                                                │
+                                                ▼
+                                      [ Security Guardrails ]
+                                                │
+                                                ▼
+                               [ Bhashini NMT Return Translation ]
+                                                │
+                                                ▼
+                                Student receives response in mother tongue
 ```
 
 ---
@@ -84,6 +76,11 @@ Citizen / Student
 ## 4. Environment Variables (`.env.local`)
 
 ```env
+# Authentication: Firebase
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key_here
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+
 # Bhashini (Digital India Bhashini Division / MeitY)
 BHASHINI_API_KEY=your_bhashini_api_key_here
 BHASHINI_USER_ID=your_bhashini_user_id_here
@@ -93,10 +90,4 @@ BHASHINI_PIPELINE_ID=ai4bharat/indictrans-v2-all-gpu--t4
 SKILL_INDIA_API_KEY=your_skill_india_digital_key_here
 APISETU_API_KEY=your_apisetu_api_key_here
 APISETU_CLIENT_ID=your_apisetu_client_id_here
-
-# MeriPehchan (National Single Sign-On / Jan Parichay)
-MERIPEHCHAN_CLIENT_ID=your_meripehchan_client_id
-MERIPEHCHAN_CLIENT_SECRET=your_meripehchan_client_secret
 ```
-
-*Note: For SIH evaluation, all adapters include offline sandbox simulations so every feature functions smoothly even if external production government credentials are not yet configured.*

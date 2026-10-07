@@ -10,12 +10,12 @@ import {
   BarChart3,
   ChevronRight,
   GraduationCap,
-  LogOut,
-  Settings,
+  ArrowUpRight,
 } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 import { LanguageSelector } from '@/components/gov/LanguageSelector';
-import { ClerkAuthButton } from '@/components/auth/ClerkAuthButton';
+import { FirebaseAuthButton } from '@/components/auth/FirebaseAuthButton';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -36,47 +36,43 @@ interface SidebarProps {
 
 export function Sidebar({ userName = 'Ravi Sharma', userRole = 'student' }: SidebarProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const activeUserName = user?.displayName || user?.email?.split('@')[0] || userName;
+  const mobileNavItems = userRole === 'admin' ? [...NAV_ITEMS, ...ADMIN_ITEMS] : NAV_ITEMS;
 
   return (
+    <>
     <aside
-      className="disha-sidebar fixed left-0 top-0 h-full w-[240px] bg-white border-r border-[#e2e8f0] flex flex-col z-40"
+      className="disha-sidebar"
       aria-label="Main navigation"
     >
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-[#e2e8f0]">
-        <Link href="/dashboard" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 bg-[#1a2e5a] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-[#0f1e3c] transition-colors">
-            <GraduationCap className="w-4.5 h-4.5 text-[#0ea5e9]" size={18} />
-          </div>
-          <div>
-            <span className="font-bold text-[#1a2e5a] text-base leading-none">DishaAI</span>
-            <p className="text-[10px] text-[#94a3b8] leading-tight mt-0.5">Career Intelligence</p>
-          </div>
+      <div className="sidebar-brand">
+        <Link href="/" className="workspace-brand" aria-label="Disha AI — home">
+          <span className="workspace-brand__seal" aria-hidden="true">दि</span>
+          <span className="workspace-brand__word">DISHA<span className="workspace-brand__ai">AI</span></span>
         </Link>
+        <p className="sidebar-caption">A path of your own.</p>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto">
+      <nav className="sidebar-nav">
+        <p className="sidebar-caption sidebar-nav__label">Your chapters</p>
         <div className="space-y-1">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          {NAV_ITEMS.map(({ href, label, icon: Icon }, index) => {
             const isActive = pathname === href || pathname.startsWith(href + '/');
             return (
               <Link
                 key={href}
                 href={href}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
-                  isActive
-                    ? 'bg-[#1a2e5a] text-white'
-                    : 'text-[#475569] hover:bg-[#f0f4ff] hover:text-[#1a2e5a]',
-                )}
+                className={cn('workspace-nav-link', isActive && 'is-active')}
+                aria-current={isActive ? 'page' : undefined}
+                title={label}
               >
-                <Icon
-                  size={18}
-                  className={cn(isActive ? 'text-[#0ea5e9]' : 'text-current')}
-                />
-                {label}
-                {isActive && <ChevronRight size={14} className="ml-auto opacity-60" />}
+                <span className="workspace-nav-link__number" aria-hidden="true">0{index + 1}</span>
+                <Icon size={18} className="workspace-nav-link__icon" aria-hidden="true" />
+                <span className="workspace-nav-link__label">{label}</span>
+                {isActive && <ChevronRight size={14} className="workspace-nav-link__arrow" aria-hidden="true" />}
               </Link>
             );
           })}
@@ -84,7 +80,7 @@ export function Sidebar({ userName = 'Ravi Sharma', userRole = 'student' }: Side
 
         {userRole === 'admin' && (
           <div className="mt-6">
-            <p className="px-3 text-[10px] font-semibold text-[#94a3b8] uppercase tracking-wider mb-2">
+            <p className="sidebar-caption sidebar-nav__label">
               Admin
             </p>
             <div className="space-y-1">
@@ -94,18 +90,12 @@ export function Sidebar({ userName = 'Ravi Sharma', userRole = 'student' }: Side
                   <Link
                     key={href}
                     href={href}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
-                      isActive
-                        ? 'bg-[#1a2e5a] text-white'
-                        : 'text-[#475569] hover:bg-[#f0f4ff] hover:text-[#1a2e5a]',
-                    )}
+                    className={cn('workspace-nav-link', isActive && 'is-active')}
+                    aria-current={isActive ? 'page' : undefined}
+                    title={label}
                   >
-                    <Icon
-                      size={18}
-                      className={cn(isActive ? 'text-[#0ea5e9]' : 'text-current')}
-                    />
-                    {label}
+                    <Icon size={18} className="workspace-nav-link__icon" aria-hidden="true" />
+                    <span className="workspace-nav-link__label">{label}</span>
                   </Link>
                 );
               })}
@@ -114,48 +104,56 @@ export function Sidebar({ userName = 'Ravi Sharma', userRole = 'student' }: Side
         )}
 
         {/* Authentication & Language Controls */}
-        <div className="mt-4 px-2 space-y-2">
+        <div className="sidebar-controls">
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="sidebar-caption">
               Language
             </span>
             <LanguageSelector className="w-full" />
           </div>
 
           <div className="pt-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+            <span className="sidebar-caption block mb-2">
               Account
             </span>
-            <ClerkAuthButton className="w-full justify-center" />
+            <FirebaseAuthButton className="w-full justify-center" />
           </div>
         </div>
 
         {/* Demo Notice */}
-        <div className="mt-4 mx-1 p-3 bg-[#fffbeb] border border-[#fef3c7] rounded-xl">
-          <p className="text-[11px] font-semibold text-[#d97706] mb-0.5">Disha AI</p>
-          <p className="text-[11px] text-[#92400e] leading-snug">
-            Career intelligence powered by Gemini & Clerk.
+        <div className="sidebar-note">
+          <p className="sidebar-caption mb-2">Made for Bharat</p>
+          <p className="text-xs leading-relaxed text-[var(--ui-muted)]">
+            Discover your strengths.<br />Build your next chapter.
           </p>
         </div>
       </nav>
 
       {/* User section */}
-      <div className="px-3 py-4 border-t border-[#e2e8f0]">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#f0f4ff] transition-colors group cursor-pointer">
-          <div className="w-8 h-8 bg-[#1a2e5a] rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {getInitials(userName)}
+      <div className="sidebar-profile">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="sidebar-profile__initials">
+            {getInitials(activeUserName)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-[#1a2e5a] truncate">{userName}</p>
-            <p className="text-xs text-[#94a3b8] capitalize">{userRole}</p>
+            <p className="text-sm text-[var(--ui-text)] truncate">{activeUserName}</p>
+            <p className="text-xs text-[var(--ui-faint)] capitalize">{userRole}</p>
           </div>
-          <LogOut
-            size={15}
-            className="text-[#94a3b8] group-hover:text-[#1a2e5a] flex-shrink-0"
-          />
+          <Link href="/onboarding" className="sidebar-profile__edit" aria-label="Update your career profile" title="Update profile"><ArrowUpRight size={16} /></Link>
         </div>
       </div>
     </aside>
+    <header className="workspace-mobile workspace-mobile__header">
+      <Link href="/" className="workspace-brand" aria-label="Disha AI — home"><span className="workspace-brand__seal" aria-hidden="true">दि</span><span className="workspace-brand__word">DISHA<span className="workspace-brand__ai">AI</span></span></Link>
+      <div className="workspace-mobile__controls"><LanguageSelector /><FirebaseAuthButton /></div>
+    </header>
+    <nav className="workspace-mobile workspace-mobile__nav" aria-label="Main navigation">
+      {mobileNavItems.map(({ href, label, icon: Icon }) => {
+        const isActive = pathname === href || pathname.startsWith(href + '/');
+        return <Link key={href} href={href} aria-label={label} aria-current={isActive ? 'page' : undefined} className={cn(isActive && 'is-active')}><Icon size={18} aria-hidden="true" /><span>{label === 'Career Matches' ? 'Matches' : label === 'Career Simulator' ? 'Simulator' : label === 'Family Mode' ? 'Family' : label === 'AI Counsellor' ? 'Counsellor' : label === 'Dashboard' ? 'Home' : label}</span></Link>;
+      })}
+    </nav>
+    </>
   );
 }
 
@@ -163,13 +161,13 @@ export function Sidebar({ userName = 'Ravi Sharma', userRole = 'student' }: Side
 
 export function TopNav() {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-[#e2e8f0]">
+    <header className="workspace-topnav fixed top-0 left-0 right-0 z-50">
       <div className="max-w-[1280px] mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-[#1a2e5a] rounded-lg flex items-center justify-center">
-            <GraduationCap size={18} className="text-[#0ea5e9]" />
+          <div className="workspace-brand__seal">
+            <GraduationCap size={18} />
           </div>
-          <span className="font-bold text-[#1a2e5a] text-lg">DishaAI</span>
+          <span className="workspace-brand__word">DISHA<span className="workspace-brand__ai">AI</span></span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
@@ -181,7 +179,7 @@ export function TopNav() {
             <Link
               key={href}
               href={href}
-              className="text-sm font-medium text-[#475569] hover:text-[#1a2e5a] transition-colors"
+              className="text-sm text-[var(--ui-muted)] hover:text-[var(--ui-text)] transition-colors"
             >
               {label}
             </Link>
@@ -190,7 +188,7 @@ export function TopNav() {
 
         <div className="flex items-center gap-3">
           <LanguageSelector />
-          <ClerkAuthButton />
+          <FirebaseAuthButton />
         </div>
       </div>
     </header>

@@ -1,38 +1,51 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   ArrowLeft, GitBranch, Clock, DollarSign, Zap, BookOpen,
-  ChevronRight, BarChart2, ArrowRight, CheckCircle2, Info
+  ChevronRight, BarChart2, CheckCircle2, Info
 } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { CareerTimeline } from '@/components/career/CareerTimeline';
 import { DEMO_CAREERS, DEMO_CAREER_PATHS } from '@/data/careers';
 import { cn } from '@/lib/utils';
-import type { OnboardingState, CareerPathway } from '@/types';
+import type { CareerPathway } from '@/types';
 
 const DEMO_PROFILE_NAME = 'Ravi Sharma';
+
+function subscribeToProfile(onStoreChange: () => void) {
+  window.addEventListener('storage', onStoreChange);
+  return () => window.removeEventListener('storage', onStoreChange);
+}
+
+function readStoredProfile() {
+  return localStorage.getItem('disha_onboarding');
+}
+
+function readServerProfile() {
+  return null;
+}
 
 export default function CareerPathPage() {
   const params = useParams();
   const careerId = params.id as string;
-  const [profile, setProfile] = useState<{ name: string }>({ name: DEMO_PROFILE_NAME });
-  const [activePathway, setActivePathway] = useState(0);
-  const [showWhatIf, setShowWhatIf] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('disha_onboarding');
-    if (saved) {
+  const savedProfile = useSyncExternalStore(subscribeToProfile, readStoredProfile, readServerProfile);
+  const profile = useMemo(() => {
+    if (savedProfile) {
       try {
-        const p = JSON.parse(saved);
-        setProfile({ name: p.name ?? DEMO_PROFILE_NAME });
+        const saved = JSON.parse(savedProfile);
+        return { name: saved.name ?? DEMO_PROFILE_NAME };
       } catch {}
     }
-  }, []);
+    return { name: DEMO_PROFILE_NAME };
+  }, [savedProfile]);
+  const [activePathway, setActivePathway] = useState(0);
+  const [showWhatIf, setShowWhatIf] = useState(false);
 
   const career = useMemo(() => DEMO_CAREERS.find((c) => c.id === careerId) ?? DEMO_CAREERS[0], [careerId]);
   const pathways: CareerPathway[] = useMemo(
@@ -42,194 +55,179 @@ export default function CareerPathPage() {
   const currentPathway = pathways[activePathway];
 
   return (
-    <div className="min-h-screen bg-[#f0f4ff] flex">
+    <div className="app-page">
       <Sidebar userName={profile.name} userRole="student" />
 
-      <main className="flex-1 ml-[240px]">
-        <div className="max-w-[1040px] mx-auto px-8 py-8">
-
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-[#94a3b8] mb-6">
-            <Link href={`/careers/${careerId}`} className="hover:text-[#1a2e5a] flex items-center gap-1">
-              <ArrowLeft size={14} /> {career.name}
+      <main className="app-main">
+        <div className="app-content">
+          <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-xs text-[var(--ui-faint)]">
+            <Link href={`/careers/${careerId}`} className="flex items-center gap-1.5 hover:text-[var(--ui-text)]">
+              <ArrowLeft size={13} aria-hidden="true" /> {career.name}
             </Link>
-            <ChevronRight size={14} />
-            <span className="text-[#1a2e5a] font-medium">Career Path Simulator</span>
-          </div>
+            <ChevronRight size={12} aria-hidden="true" />
+            <span aria-current="page" className="text-[var(--ui-muted)]">Career simulator</span>
+          </nav>
 
-          {/* Header */}
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-[#e0f2fe] rounded-lg flex items-center justify-center">
-                  <GitBranch size={16} className="text-[#0284c7]" />
-                </div>
-                <span className="text-sm font-semibold text-[#0284c7]">Career Path Simulator</span>
-              </div>
-              <h1 className="text-2xl font-bold text-[#1a2e5a]">{career.name}</h1>
-              <p className="text-[#64748b] mt-1">
-                Explore your full journey from education to employment. Click each step to expand.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs px-2.5 py-1.5 bg-[#fffbeb] border border-[#fef3c7] text-[#d97706] rounded-full font-medium">
-                Illustrative Pathways
-              </span>
-              <Button
-                variant={showWhatIf ? 'secondary' : 'outline'}
-                size="sm"
-                onClick={() => setShowWhatIf((v) => !v)}
-                icon={<BarChart2 size={14} />}
-              >
-                {showWhatIf ? 'Hide Comparison' : 'What If? Compare'}
-              </Button>
-            </div>
-          </div>
+          <PageHeader
+            chapter="03"
+            eyebrow="Career path simulator"
+            title={career.name}
+            description="Explore the journey from education to employment. Open each step to see the skills, qualifications, and opportunities along the way."
+            actions={
+              <>
+                <Badge variant="warning" size="sm">Illustrative pathways</Badge>
+                <Button
+                  variant={showWhatIf ? 'primary' : 'outline'}
+                  size="sm"
+                  onClick={() => setShowWhatIf((v) => !v)}
+                  aria-expanded={showWhatIf}
+                  aria-controls="pathway-details"
+                  icon={<BarChart2 size={14} aria-hidden="true" />}
+                >
+                  {showWhatIf ? 'Hide comparison' : 'What if? Compare'}
+                </Button>
+              </>
+            }
+          />
 
-          <div className={cn('grid gap-6', showWhatIf ? 'grid-cols-5' : 'grid-cols-3')}>
-
-            {/* Timeline col */}
-            <div className={showWhatIf ? 'col-span-2' : 'col-span-2'}>
-
-              {/* Pathway selector */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <section aria-label="Training pathway" className={cn('min-w-0', showWhatIf ? 'lg:col-span-5' : 'lg:col-span-8')}>
               {pathways.length > 1 && (
-                <div className="flex gap-2 mb-5 flex-wrap">
-                  {pathways.map((pw, i) => (
-                    <button
-                      key={pw.id}
-                      onClick={() => setActivePathway(i)}
-                      className={cn(
-                        'px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150',
-                        activePathway === i
-                          ? 'bg-[#1a2e5a] text-white shadow-sm'
-                          : 'bg-white border border-[#e2e8f0] text-[#475569] hover:border-[#c5d9f0]',
-                      )}
-                    >
-                      {pw.name}
-                    </button>
-                  ))}
+                <div className="mb-5">
+                  <p className="eyebrow">Choose your route</p>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Select a pathway">
+                    {pathways.map((pw, i) => (
+                      <button
+                        key={pw.id}
+                        type="button"
+                        onClick={() => setActivePathway(i)}
+                        aria-pressed={activePathway === i}
+                        aria-controls="career-timeline"
+                        className={cn(
+                          'min-h-11 rounded-sm border px-4 py-2 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-[var(--ui-accent)] focus-visible:outline-offset-2',
+                          activePathway === i
+                            ? 'border-[var(--ui-accent)] bg-[var(--ui-surface-2)] text-[var(--ui-text)]'
+                            : 'border-[var(--ui-border)] text-[var(--ui-muted)] hover:border-[var(--ui-accent)] hover:text-[var(--ui-text)]',
+                        )}
+                      >
+                        {pw.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Stats bar */}
               {currentPathway && (
-                <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 mb-5 grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs text-[#94a3b8] mb-0.5">Total Duration</p>
-                    <p className="text-sm font-bold text-[#1a2e5a] flex items-center gap-1">
-                      <Clock size={13} className="text-[#0284c7]" />
-                      {currentPathway.duration}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#94a3b8] mb-0.5">Training Cost</p>
-                    <p className="text-sm font-bold text-[#1a2e5a] flex items-center gap-1">
-                      <DollarSign size={13} className="text-[#059669]" />
-                      {currentPathway.cost_range}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#94a3b8] mb-0.5">Practical Exposure</p>
-                    <p className="text-sm font-bold text-[#1a2e5a] flex items-center gap-1">
-                      <Zap size={13} className="text-[#d97706]" />
-                      {currentPathway.practical_exposure}
-                    </p>
-                  </div>
-                </div>
+                <Card padding="md" className="mb-5">
+                  <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div>
+                      <dt className="ui-note mb-1">Total duration</dt>
+                      <dd className="flex items-start gap-1.5 text-sm font-semibold text-[var(--ui-text)]">
+                        <Clock size={14} className="mt-0.5 shrink-0 text-[var(--ui-accent)]" aria-hidden="true" />
+                        {currentPathway.duration}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="ui-note mb-1">Training cost</dt>
+                      <dd className="flex items-start gap-1.5 text-sm font-semibold text-[var(--ui-text)]">
+                        <DollarSign size={14} className="mt-0.5 shrink-0 text-[var(--ui-success)]" aria-hidden="true" />
+                        {currentPathway.cost_range}
+                      </dd>
+                    </div>
+                    <div className="col-span-2 sm:col-span-1">
+                      <dt className="ui-note mb-1">Practical exposure</dt>
+                      <dd className="flex items-start gap-1.5 text-sm font-semibold text-[var(--ui-text)]">
+                        <Zap size={14} className="mt-0.5 shrink-0 text-[var(--ui-faint)]" aria-hidden="true" />
+                        {currentPathway.practical_exposure}
+                      </dd>
+                    </div>
+                  </dl>
+                </Card>
               )}
 
-              {/* Timeline */}
-              {currentPathway ? (
-                <CareerTimeline
-                  steps={currentPathway.steps}
-                  pathwayName={currentPathway.name}
-                />
-              ) : (
-                <div className="bg-white border border-[#e2e8f0] rounded-2xl p-6 text-center text-[#64748b]">
-                  <GitBranch size={32} className="mx-auto mb-3 text-[#e2e8f0]" />
-                  <p className="font-medium">Career path steps coming soon.</p>
-                  <p className="text-sm mt-1">This career's detailed pathway is being added to the knowledge base.</p>
-                </div>
-              )}
-            </div>
+              <div id="career-timeline">
+                {currentPathway ? (
+                  <CareerTimeline steps={currentPathway.steps} pathwayName={currentPathway.name} />
+                ) : (
+                  <div className="paper-panel p-6 text-center">
+                    <GitBranch size={28} className="mx-auto mb-3 text-[var(--ui-faint)]" aria-hidden="true" />
+                    <p className="section-title">Career path steps coming soon.</p>
+                    <p className="ui-note mt-2">This career&apos;s detailed pathway is being added to the knowledge base.</p>
+                  </div>
+                )}
+              </div>
+            </section>
 
-            {/* Right panel */}
-            <div className={showWhatIf ? 'col-span-3' : 'col-span-1'}>
-
+            <aside id="pathway-details" aria-label={showWhatIf && pathways.length >= 2 ? 'Pathway comparison' : 'Career details'} className={cn('min-w-0', showWhatIf ? 'lg:col-span-7' : 'lg:col-span-4')}>
               {showWhatIf && pathways.length >= 2 ? (
                 <PathwayComparison pathways={pathways} />
               ) : (
                 <div className="space-y-4">
-                  {/* Quick summary */}
                   <Card padding="md">
-                    <h3 className="font-semibold text-[#1a2e5a] text-sm mb-3">Career Summary</h3>
-                    <div className="space-y-3">
+                    <h2 className="section-title mb-4">Career summary</h2>
+                    <div className="space-y-4">
                       <div>
-                        <p className="text-xs text-[#94a3b8] mb-1">Entry Requirement</p>
-                        <p className="text-sm font-medium text-[#1a2e5a]">{career.education_requirement}</p>
+                        <p className="ui-note mb-1">Entry requirement</p>
+                        <p className="text-sm font-medium text-[var(--ui-text)]">{career.education_requirement}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-[#94a3b8] mb-1">Training Type</p>
+                        <p className="ui-note mb-1.5">Training type</p>
                         <div className="flex flex-wrap gap-1.5">
                           {career.training_type.map((t) => (
-                            <Badge key={t} variant="info" size="sm">{t.toUpperCase()}</Badge>
+                            <Badge key={t} variant="neutral" size="sm">{t.toUpperCase()}</Badge>
                           ))}
                         </div>
                       </div>
                       <div>
-                        <p className="text-xs text-[#94a3b8] mb-1">Career Growth</p>
-                        <div className="space-y-1">
+                        <p className="ui-note mb-1.5">Career growth</p>
+                        <ol className="space-y-2">
                           {career.career_progression.map((step, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full bg-[#0ea5e9]" />
-                              <span className="text-xs text-[#475569]">{step}</span>
-                            </div>
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="mt-1.5 h-1 w-1 shrink-0 bg-[var(--ui-success)]" aria-hidden="true" />
+                              <span className="text-xs text-[var(--ui-muted)]">{step}</span>
+                            </li>
                           ))}
-                        </div>
+                        </ol>
                       </div>
                     </div>
                   </Card>
 
-                  {/* Further education */}
                   <Card padding="md">
-                    <div className="flex items-center gap-2 mb-3">
-                      <BookOpen size={14} className="text-[#0284c7]" />
-                      <h3 className="font-semibold text-[#1a2e5a] text-sm">Further Education</h3>
+                    <div className="mb-4 flex items-center gap-2">
+                      <BookOpen size={16} className="shrink-0 text-[var(--ui-success)]" aria-hidden="true" />
+                      <h2 className="section-title">Further education</h2>
                     </div>
-                    <ul className="space-y-1.5">
+                    <ul className="space-y-2">
                       {career.further_education.map((edu) => (
-                        <li key={edu} className="flex items-start gap-2 text-xs text-[#475569]">
-                          <CheckCircle2 size={12} className="text-[#0284c7] flex-shrink-0 mt-0.5" />
+                        <li key={edu} className="flex items-start gap-2 text-xs leading-relaxed text-[var(--ui-muted)]">
+                          <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-[var(--ui-success)]" aria-hidden="true" />
                           {edu}
                         </li>
                       ))}
                     </ul>
                   </Card>
 
-                  {/* AI Counsellor CTA */}
-                  <div className="bg-[#1a2e5a] rounded-2xl p-4 text-white">
-                    <p className="font-semibold text-sm mb-1">Questions about this path?</p>
-                    <p className="text-xs text-[#8aaee0] mb-3">Ask the AI Career Counsellor anything about this pathway.</p>
-                    <Link href="/counsellor">
-                      <Button variant="secondary" size="sm" fullWidth>
+                  <div className="dark-panel p-5">
+                    <p className="eyebrow">A little guidance</p>
+                    <h2 className="section-title mb-2">Questions about this path?</h2>
+                    <p className="ui-note mb-4">Ask the AI Career Counsellor anything about this pathway.</p>
+                    <Link href="/counsellor" className="block">
+                      <Button variant="primary" size="sm" fullWidth>
                         Ask AI Counsellor
                       </Button>
                     </Link>
                   </div>
 
-                  {/* Family mode */}
-                  <div className="bg-[#f0f9ff] border border-[#bae6fd] rounded-2xl p-4">
-                    <p className="font-semibold text-sm text-[#0284c7] mb-1">Share with Parents</p>
-                    <p className="text-xs text-[#0369a1] mb-3">
-                      Generate a simple report for your family about this career path.
-                    </p>
-                    <Link href="/family">
+                  <Card padding="md">
+                    <h2 className="section-title mb-2">Bring your family along.</h2>
+                    <p className="ui-note mb-4">Explore clear guidance and a printable report together.</p>
+                    <Link href="/family" className="block">
                       <Button variant="outline" size="sm" fullWidth>Open Family Mode</Button>
                     </Link>
-                  </div>
+                  </Card>
                 </div>
               )}
-            </div>
+            </aside>
           </div>
         </div>
       </main>
@@ -247,78 +245,61 @@ function PathwayComparison({ pathways }: { pathways: CareerPathway[] }) {
   ];
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-4">
-        <BarChart2 size={16} className="text-[#0284c7]" />
-        <h3 className="font-bold text-[#1a2e5a]">Pathway Comparison</h3>
-        <span className="text-[10px] px-2 py-0.5 bg-[#fffbeb] text-[#d97706] border border-[#fef3c7] rounded-full font-medium">
-          Illustrative Data
-        </span>
+    <section className="min-w-0" aria-labelledby="pathway-comparison-title">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <BarChart2 size={17} className="text-[var(--ui-accent)]" aria-hidden="true" />
+        <h2 id="pathway-comparison-title" className="section-title">Pathway comparison</h2>
+        <span className="ui-chip">Illustrative data</span>
       </div>
 
-      <div className="bg-white border border-[#e2e8f0] rounded-2xl overflow-hidden">
-        {/* Header row */}
+      <div className="paper-panel min-w-0 overflow-hidden">
         <div
-          className="grid gap-0 border-b border-[#e2e8f0]"
-          style={{ gridTemplateColumns: `160px repeat(${pathways.length}, 1fr)` }}
+          className="max-w-full overflow-x-auto focus-visible:outline-2 focus-visible:outline-[var(--ui-accent)] focus-visible:outline-offset-[-2px]"
+          role="region"
+          aria-label="Pathway comparison table; scroll to see all routes"
+          tabIndex={0}
         >
-          <div className="p-4 bg-[#f8faff]" />
-          {pathways.map((pw) => (
-            <div key={pw.id} className="p-4 bg-[#f8faff] border-l border-[#e2e8f0]">
-              <p className="font-bold text-sm text-[#1a2e5a]">{pw.name}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Data rows */}
-        {rows.map((row, ri) => (
-          <div
-            key={row.key}
-            className={cn(
-              'grid gap-0',
-              ri < rows.length - 1 ? 'border-b border-[#f1f5f9]' : '',
-            )}
-            style={{ gridTemplateColumns: `160px repeat(${pathways.length}, 1fr)` }}
-          >
-            <div className="p-4 bg-[#f8faff]">
-              <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">{row.label}</p>
-            </div>
-            {pathways.map((pw) => (
-              <div key={pw.id} className="p-4 border-l border-[#f1f5f9]">
-                <p className="text-sm text-[#1a2e5a] font-medium">{pw[row.key]}</p>
-              </div>
-            ))}
-          </div>
-        ))}
-
-        {/* Further education row */}
-        <div
-          className="grid gap-0 border-t border-[#e2e8f0]"
-          style={{ gridTemplateColumns: `160px repeat(${pathways.length}, 1fr)` }}
-        >
-          <div className="p-4 bg-[#f8faff]">
-            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">
-              Further Education
-            </p>
-          </div>
-          {pathways.map((pw) => (
-            <div key={pw.id} className="p-4 border-l border-[#f1f5f9]">
-              <Badge variant={pw.further_education_possible ? 'success' : 'neutral'} size="sm">
-                {pw.further_education_possible ? 'Yes — multiple routes' : 'Limited options'}
-              </Badge>
-            </div>
-          ))}
+          <table className="w-full border-collapse text-left" style={{ minWidth: 150 + pathways.length * 180 }}>
+            <caption className="sr-only">Compare duration, training costs, exposure, and entry requirements for each route.</caption>
+            <thead>
+              <tr className="border-b border-[var(--ui-border)] bg-[var(--ui-surface-2)]">
+                <th scope="col" className="w-[150px] p-4 text-xs font-medium text-[var(--ui-muted)]">At a glance</th>
+                {pathways.map((pw) => (
+                  <th key={pw.id} scope="col" className="border-l border-[var(--ui-border)] p-4 text-sm font-semibold text-[var(--ui-text)]">{pw.name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.key} className="border-b border-[var(--ui-border)]">
+                  <th scope="row" className="bg-[var(--ui-surface-2)] p-4 align-top text-[11px] font-medium tracking-wide text-[var(--ui-muted)]">{row.label}</th>
+                  {pathways.map((pw) => (
+                    <td key={pw.id} className="border-l border-[var(--ui-border)] p-4 align-top text-sm text-[var(--ui-text)]">{pw[row.key]}</td>
+                  ))}
+                </tr>
+              ))}
+              <tr>
+                <th scope="row" className="bg-[var(--ui-surface-2)] p-4 align-top text-[11px] font-medium tracking-wide text-[var(--ui-muted)]">Further education</th>
+                {pathways.map((pw) => (
+                  <td key={pw.id} className="border-l border-[var(--ui-border)] p-4 align-top">
+                    <Badge variant={pw.further_education_possible ? 'success' : 'neutral'} size="sm">
+                      {pw.further_education_possible ? 'Yes — multiple routes' : 'Limited options'}
+                    </Badge>
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Disclaimer */}
-      <div className="mt-4 flex items-start gap-2 p-3 bg-[#fffbeb] border border-[#fef3c7] rounded-xl">
-        <Info size={14} className="text-[#d97706] flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-[#92400e]">
-          <strong>Illustrative Data:</strong> Cost ranges and duration estimates are indicative only.
+      <div className="ui-alert mt-4 flex items-start gap-2">
+        <Info size={15} className="mt-0.5 shrink-0 text-[var(--ui-accent)]" aria-hidden="true" />
+        <p className="ui-note">
+          <strong className="font-medium text-[var(--ui-text)]">Illustrative data:</strong> Cost ranges and duration estimates are indicative only.
           Actual figures vary by institution, state, and year. Please verify with the relevant ITI or polytechnic.
         </p>
       </div>
-    </div>
+    </section>
   );
 }

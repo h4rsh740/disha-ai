@@ -12,12 +12,12 @@
   absent; the UI receives a friendly fallback instead of a raw secret/error.
 - [x] `/api/health` reports local security/retrieval readiness and provider,
   database, and authentication configuration presence without returning secrets.
-- [ ] No user-facing screen claims that Clerk, PostgreSQL/pgvector, RAG, or
+- [ ] No user-facing screen claims that Firebase Auth, PostgreSQL/pgvector, RAG, or
   persistent audit storage is connected until those integrations are wired.
 
 ## Integration gate
 
-- [ ] Clerk session is verified server-side and mapped to `profiles.auth_user_id`.
+- [ ] Firebase session is verified and mapped to `profiles.auth_user_id`.
 - [ ] Profile, skills, conversations, and messages are persisted and isolated by
   RLS; knowledge and audit data remain server/admin-only.
 - [ ] Reviewed documents are chunked, embedded at 768 dimensions, and retrieved
